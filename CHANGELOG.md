@@ -4,6 +4,10 @@ All notable user-facing changes will be recorded here. The format follows [Keep 
 
 ## [Unreleased]
 
+### Desktop — Fixed
+
+- Prevented table labels and identifiers from collapsing into single-letter columns. Headers stay on one line, descriptions wrap at word boundaries, and wide tables scroll within the reader.
+
 ### Firefox integration
 
 - Imported submitted Firefox 0.1.0 sources unchanged, with complete source/runtime

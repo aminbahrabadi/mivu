@@ -225,6 +225,56 @@ def main():
             driver.screenshot('reader-light.png')
             driver.execute('document.querySelector("#theme").value="dark"; document.querySelector("#theme").dispatchEvent(new Event("change"))')
             driver.screenshot('reader-dark.png')
+            driver.execute('document.querySelector("[data-action=open]").click()')
+            choose_native_file(ROOT / 'tests/fixtures/tables.md')
+            wait_for(lambda: document_ready(driver, 'Readable tables'))
+            for theme, width, zoom in (('light', 1000, 100), ('light', 560, 100), ('dark', 1000, 100), ('dark', 560, 100), ('dark', 560, 180)):
+                driver.execute('document.querySelector("#theme").value=arguments[0]; document.querySelector("#theme").dispatchEvent(new Event("change"))', theme)
+                driver.request('POST', f'/session/{driver.session}/window/rect', {'width': width, 'height': 850})
+                driver.execute('document.querySelector("article").style.setProperty("--reader-size", arguments[0] + "px")', 17 * zoom / 100)
+                layout = driver.execute('''
+                    const table = document.querySelector('article table');
+                    const singleLine = cell => {
+                        const range = document.createRange();
+                        range.selectNodeContents(cell);
+                        return range.getBoundingClientRect().height <= parseFloat(getComputedStyle(cell).lineHeight);
+                    };
+                    const padded = cell => {
+                        const range = document.createRange();
+                        range.selectNodeContents(cell);
+                        const text = range.getBoundingClientRect();
+                        const box = cell.getBoundingClientRect();
+                        const style = getComputedStyle(cell);
+                        return text.left >= box.left + parseFloat(style.paddingLeft) - 1 && text.right <= box.right - parseFloat(style.paddingRight) + 1;
+                    };
+                    const wrappers = [...document.querySelectorAll('.table-scroll')];
+                    const compactCells = [0, 1, 3, 4, 5, 6].map(i => table.tBodies[0].rows[0].cells[i]);
+                    const description = table.tBodies[0].rows[0].cells[2];
+                    const descriptionRange = document.createRange();
+                    descriptionRange.selectNodeContents(description);
+                    return {
+                        headers: [...table.tHead.rows[0].cells].every(singleLine),
+                        compact: compactCells.every(singleLine),
+                        description: descriptionRange.getBoundingClientRect().height <= 4 * parseFloat(getComputedStyle(description).lineHeight),
+                        cells: [...table.querySelectorAll('th,td')].every(padded) && [...document.querySelectorAll('article th,article td')].every(cell => cell.scrollWidth <= cell.clientWidth + 1),
+                        confined: document.documentElement.scrollWidth <= innerWidth && document.querySelector('#reader').scrollWidth <= document.querySelector('#reader').clientWidth,
+                        scrollable: wrappers[0].scrollWidth > wrappers[0].clientWidth,
+                        longValue: wrappers[2].scrollWidth > wrappers[2].clientWidth,
+                        rtl: getComputedStyle(wrappers[1].querySelector('tbody td:nth-child(2)')).direction,
+                        code: getComputedStyle(wrappers[1].querySelector('code')).direction
+                    };
+                ''')
+                assert all(layout[key] for key in ('headers', 'compact', 'description', 'cells', 'confined', 'longValue')), layout
+                assert layout['rtl'] == 'rtl' and layout['code'] == 'ltr', layout
+                if width == 560: assert layout['scrollable'], layout
+                if zoom == 100:
+                    driver.execute('document.activeElement.blur()')
+                    driver.screenshot(f'tables-{theme}-{width}.png')
+            driver.execute('document.querySelector("article").style.removeProperty("--reader-size")')
+            driver.request('POST', f'/session/{driver.session}/window/rect', {'width': 1000, 'height': 850})
+            driver.execute('document.querySelector("[data-action=open]").click()')
+            choose_native_file(ROOT / 'tests/fixtures/reading.md')
+            wait_for(lambda: document_ready(driver, 'Reading, without the noise'))
             driver.execute('document.querySelector("#find").click(); const input=document.querySelector("#search-input"); input.value="read"; input.dispatchEvent(new Event("input"))')
             assert driver.execute('return document.querySelectorAll("mark").length') >= 2
             driver.execute('document.dispatchEvent(new KeyboardEvent("keydown", {key:"Escape"}))')

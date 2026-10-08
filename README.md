@@ -44,6 +44,7 @@ Implemented:
 - Native file picker, drag-and-drop, `.md` and `.markdown`, UTF-8 and Unicode paths.
 - Startup file arguments and forwarding to the existing application window.
 - GFM headings, tables, nested lists, disabled task lists, strikethrough, autolinks, links, and images.
+- Tables keep headers and short words readable; wide tables scroll horizontally without widening the page.
 - Syntax highlighting for Bash, CSS, JavaScript, JSON, Python, Rust, TypeScript, and XML/HTML; other languages remain readable plain code.
 - Constrained relative Markdown links and local PNG/JPEG/GIF/WebP images.
 - System, light, and dark themes; comfortable typography, scrolling, text selection and copying.

@@ -120,20 +120,28 @@
   margin-block: 1.5em;
 }
 .markdown table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   font-size: 0.9em;
   text-align: start;
 }
 .markdown th,
 .markdown td {
+  box-sizing: content-box;
   padding: 0.7em 1em;
   border-bottom: 1px solid var(--border);
   text-align: start;
+  vertical-align: top;
+  overflow-wrap: break-word;
+}
+.markdown td {
+  max-width: 28em;
 }
 .markdown th {
   font-weight: 650;
   background: var(--surface-soft);
+  white-space: nowrap;
 }
 .markdown td[align='center'],
 .markdown th[align='center'] {
