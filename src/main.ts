@@ -1,4 +1,6 @@
+import './styles/themes.css';
 import './styles/global.css';
+import './styles/markdown.css';
 import { startApp } from './app';
 
 void startApp(document.querySelector<HTMLDivElement>('#app')!).catch(

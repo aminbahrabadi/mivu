@@ -35,3 +35,7 @@ Dependencies installed, lockfiles committed, frontend build/typecheck/lint and R
 ### Phase 2
 
 21 frontend tests and 3 Rust tests passed. Typecheck, lint, production frontend build, and Clippy with warnings denied passed. Adversarial checks cover active HTML/URLs, inert image references, Unicode references, path traversal, symlink escapes and mismatched image signatures. Controlled frontend bundle is 193.20 kB uncompressed / 74.43 kB gzip at this checkpoint. Local raster support deliberately excludes SVG. Real desktop integration is repeated in Phase 6.
+
+### Phase 3
+
+28 frontend tests passed with typecheck/lint/build. Native WebKit automation passed the actual picker, local raster decoding, local Markdown navigation, theme switching, search, zoom, Persian paragraph direction, LTR code and 560px window resizing. Original application screenshots captured and visually inspected in light/dark and mixed-language states. tests/native_smoke.py uses Python standard library with platform WebKitWebDriver and libxdo; no browser framework is needed for native coverage. Human long-session reading and accessibility assistive technology still need manual checks.

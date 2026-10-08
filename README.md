@@ -9,7 +9,15 @@ A minimal, beautiful, read-only Markdown reader. MIT licensed, Linux-first, buil
 - Native open dialog and drag-and-drop, UTF-8 Markdown, friendly errors, Unicode paths.
 - Read-only rendering, bounded documents (8 MiB), and Ctrl+O.
 - GFM tables, task lists, nested lists, autolinks, syntax highlighting, local Markdown links and PNG/JPEG/GIF/WebP images.
+- System/light/dark themes, per-block Persian/English direction, search across formatted text, selection/copy, keyboard reading zoom.
 - No editing, accounts, telemetry, cloud, plugins, terminals, or remote content loading.
+
+## Screenshots
+
+Actual Mivu WebKit screenshots captured on Zorin OS 18.1 using an isolated X11 display.
+
+![Reader, light appearance](docs/screenshots/reader-light.png)
+![Persian and English, dark appearance](docs/screenshots/persian-dark.png)
 
 ## Architecture
 
@@ -38,7 +46,7 @@ The durable execution plan is [docs/implementation.md](docs/implementation.md). 
 | 0     | Tooling, shell, CI            | Validated |
 | 1     | Native file opening           | Validated |
 | 2     | Secure Markdown rendering     | Validated |
-| 3     | Reading experience and RTL    | Pending   |
+| 3     | Reading experience and RTL    | Validated |
 | 4     | Linux integration and refresh | Pending   |
 | 5     | Security and robustness       | Pending   |
 | 6     | Tests and performance         | Pending   |
