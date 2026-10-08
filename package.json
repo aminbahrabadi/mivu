@@ -36,7 +36,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.63.0",
     "@tauri-apps/cli": "^2.12.1",
     "@types/markdown-it": "^14.2.0",
     "@types/node": "^26.6.4",

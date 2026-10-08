@@ -43,3 +43,7 @@ Dependencies installed, lockfiles committed, frontend build/typecheck/lint and R
 ### Phase 4
 
 5 Rust tests and 28 frontend tests passed, including watcher atomic replacement, debounce, neighbor filtering and cleanup. Native WebKit test verified startup and second-instance forwarding, Unicode/spaced paths, refresh/scroll preservation, deletion and recovery; observed refresh 210.1 ms on one sample (not a statistical benchmark). Debug .deb built, inspected and extracted into an isolated XDG environment. MIME database identifies .md as text/markdown and gio launches the package desktop entry without modifying host defaults. Wayland host launch previously succeeded; native automation uses X11. Human file-manager default-handler and high-DPI checks remain pending.
+
+### Phase 5
+
+7 Rust tests, 30 frontend tests, Clippy, typecheck/lint/build passed. Actual GTK file drag/drop is now covered; installed Tauri source confirmed that the main-content webview emits synthesized WindowEvent::DragDrop. Native WebKit checks deny unrestricted filesystem IPC, reject a traversal image read and block navigation to an external origin. Permission failures, source replacement with an escaping symlink or FIFO, stale startup errors and detached image replies have regression tests. No private source content is logged. System WebKit/decoder vulnerabilities and denial-of-service remain outside a complete sandbox guarantee.

@@ -183,6 +183,33 @@ fn open_readonly(root: &Dir, relative: &Path) -> Result<File, String> {
 mod tests {
     use super::*;
 
+    #[cfg(unix)]
+    #[test]
+    fn rejects_unreadable_files_and_replacement_symlinks_or_fifos() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let path = dir.path().join("file.md");
+        std::fs::write(&path, "safe").unwrap();
+        let open = OpenDocument::selected(&path, 1).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o000)).unwrap();
+        if !std::env::var("USER").is_ok_and(|user| user == "root") {
+            assert!(read_markdown(&open.root, &open.relative).is_err());
+        }
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+        std::fs::write(outside.path().join("secret.md"), "private").unwrap();
+        std::fs::remove_file(&path).unwrap();
+        std::os::unix::fs::symlink(outside.path().join("secret.md"), &path).unwrap();
+        assert!(read_markdown(&open.root, &open.relative).is_err());
+        std::fs::remove_file(&path).unwrap();
+        assert!(std::process::Command::new("mkfifo")
+            .arg(&path)
+            .status()
+            .unwrap()
+            .success());
+        assert!(read_markdown(&open.root, &open.relative).is_err());
+    }
+
     #[test]
     fn relative_resources_stay_in_the_selected_folder() {
         let dir = tempfile::tempdir().unwrap();

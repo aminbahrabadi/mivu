@@ -144,6 +144,9 @@ pub async fn read_image(app: AppHandle, id: u64, reference: String) -> Result<St
             .filter(|open| open.snapshot.id == id)
             .ok_or("This document is no longer active.")?;
         let (source, size) = current.image(&reference)?;
+        if session.image_bytes + size > 24 * 1024 * 1024 {
+            return Err("This document's image budget is exhausted.".into());
+        }
         session.image_bytes += size;
         Ok(source)
     })
@@ -151,22 +154,10 @@ pub async fn read_image(app: AppHandle, id: u64, reference: String) -> Result<St
     .map_err(|_| "Could not read the image.")?
 }
 
-pub fn validate_external(value: &str) -> Result<url::Url, String> {
-    let url = url::Url::parse(value).map_err(|_| "This link is not a valid URL.")?;
-    if !matches!(url.scheme(), "https" | "http" | "mailto")
-        || !url.username().is_empty()
-        || url.password().is_some()
-        || value.chars().any(char::is_control)
-    {
-        return Err("Only HTTP, HTTPS, and mail links can be opened externally.".into());
-    }
-    Ok(url)
-}
-
 #[tauri::command]
 pub async fn open_external(app: AppHandle, url: String) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
-    let url = validate_external(&url)?;
+    let url = crate::security::validate_external(&url)?;
     app.opener()
         .open_url(url.as_str(), None::<&str>)
         .map_err(|_| "Could not open your default browser or mail application.".into())

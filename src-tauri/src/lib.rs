@@ -2,6 +2,7 @@ mod cli;
 mod commands;
 mod documents;
 mod file_watcher;
+mod security;
 
 use commands::{open_selected, report_error, ReaderState, Session};
 use std::sync::Mutex;
@@ -35,6 +36,15 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(Mutex::new(Session::default()) as ReaderState)
         .setup(|app| {
+            let config = app
+                .config()
+                .app
+                .windows
+                .first()
+                .ok_or("Missing main window configuration")?;
+            tauri::WebviewWindowBuilder::from_config(app, config)?
+                .on_navigation(security::allowed_navigation)
+                .build()?;
             let handle = app.handle().clone();
             tauri::async_runtime::spawn_blocking(move || {
                 match std::env::current_dir()
@@ -59,28 +69,25 @@ pub fn run() {
             commands::read_image,
             commands::open_external
         ])
-        .on_webview_event(|webview, event| {
-            let tauri::WebviewEvent::DragDrop(event) = event else {
-                return;
-            };
-            let active = matches!(
-                event,
-                tauri::DragDropEvent::Enter { .. } | tauri::DragDropEvent::Over { .. }
-            );
-            let _ = webview.emit("drag-active", active);
-            if let tauri::DragDropEvent::Drop { paths, .. } = event {
-                if let Some(path) = paths.first() {
-                    let app = webview.app_handle().clone();
-                    let path = path.clone();
-                    tauri::async_runtime::spawn_blocking(move || {
-                        if let Err(error) = open_selected(&app, &path) {
-                            report_error(&app, error);
-                        }
-                    });
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::DragDrop(event) = event {
+                let active = matches!(
+                    event,
+                    tauri::DragDropEvent::Enter { .. } | tauri::DragDropEvent::Over { .. }
+                );
+                let _ = window.emit("drag-active", active);
+                if let tauri::DragDropEvent::Drop { paths, .. } = event {
+                    if let Some(path) = paths.first() {
+                        let app = window.app_handle().clone();
+                        let path = path.clone();
+                        tauri::async_runtime::spawn_blocking(move || {
+                            if let Err(error) = open_selected(&app, &path) {
+                                report_error(&app, error);
+                            }
+                        });
+                    }
                 }
             }
-        })
-        .on_window_event(|window, event| {
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 if let Ok(mut session) = window.state::<ReaderState>().lock() {
                     session.watcher = None;

@@ -44,6 +44,10 @@ class Driver:
         return self.request('POST', f'/session/{self.session}/execute/sync',
                             {'script': script, 'args': list(args)})
 
+    def execute_async(self, script, *args):
+        return self.request('POST', f'/session/{self.session}/execute/async',
+                            {'script': script, 'args': list(args)})
+
     def screenshot(self, name):
         image = self.request('GET', f'/session/{self.session}/screenshot')
         output = ROOT / 'docs/screenshots' / name
@@ -93,6 +97,33 @@ def choose_native_file(path):
     lib.xdo_move_mouse_relative_to_window(handle, window, 850, 678)
     lib.xdo_click_window(handle, 0, 1)
     lib.xdo_free(handle)
+
+
+
+def drag_file(path, env):
+    process = subprocess.Popen(['/usr/bin/python3', str(ROOT / 'scripts/drag_source.py'), str(path)], env=env)
+    try:
+        time.sleep(0.6)
+        lib = ctypes.CDLL('libxdo.so.3')
+        lib.xdo_new.argtypes = [ctypes.c_char_p]
+        lib.xdo_new.restype = ctypes.c_void_p
+        handle = lib.xdo_new(os.environ['DISPLAY'].encode())
+        lib.xdo_move_mouse.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+        lib.xdo_mouse_down.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_int]
+        lib.xdo_mouse_up.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_int]
+        lib.xdo_free.argtypes = [ctypes.c_void_p]
+        lib.xdo_move_mouse(handle, 1120, 90, 0)
+        lib.xdo_mouse_down(handle, 0, 1)
+        for x in range(1120, 450, -25):
+            lib.xdo_move_mouse(handle, x, 180, 0)
+            time.sleep(0.03)
+        time.sleep(0.3)
+        lib.xdo_mouse_up(handle, 0, 1)
+        lib.xdo_free(handle)
+        time.sleep(0.3)
+    finally:
+        process.terminate()
+        process.wait(timeout=5)
 
 
 def main():
@@ -171,6 +202,14 @@ def main():
                 wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Initial')
                 driver.execute('document.querySelector("#reader").scrollTo({top:200,behavior:"instant"})')
                 original_scroll = driver.execute('return document.querySelector("#reader").scrollTop')
+                drag = folder / 'dropped.markdown'
+                drag.write_text('# Dropped document')
+                drag_file(drag, env)
+                wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Dropped document')
+                subprocess.run([str(args.binary.resolve()), str(path)], env=env, check=True, timeout=10)
+                wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Initial')
+                driver.execute('document.querySelector("#reader").scrollTo({top:200,behavior:"instant"})')
+                original_scroll = driver.execute('return document.querySelector("#reader").scrollTop')
                 before = time.monotonic()
                 path.write_text('# Updated' + long_text)
                 wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Updated')
@@ -195,9 +234,18 @@ def main():
                     'webkitgtk:browserOptions': {'binary': str(args.binary.resolve()), 'args': [str(path)]}}}})
                 driver.session = result['sessionId']
                 wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Restored')
-                print(f'PASS: native reader, startup/second-instance CLI, watch/atomic replacement/deletion/recovery; observed refresh {watch_ms} ms')
+                subprocess.run([str(args.binary.resolve()), str(ROOT / 'tests/fixtures/adversarial.md')], env=env, check=True, timeout=10)
+                wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Untrusted input')
+                assert driver.execute('return !window.__mivuPwned && !document.querySelector("article script,article iframe,article object,article svg")')
+                assert driver.execute('return !document.querySelector("article img[src^=http]")')
+                assert driver.execute_async("const done=arguments[arguments.length-1]; window.__TAURI_INTERNALS__.invoke('plugin:fs|read_text_file', {path:'/etc/passwd'}).then(()=>done(false),()=>done(true))")
+                assert driver.execute_async("const done=arguments[arguments.length-1]; window.__TAURI_INTERNALS__.invoke('current_document').then(state=>window.__TAURI_INTERNALS__.invoke('read_image',{id:state.document.id,reference:'../../LICENSE'})).then(()=>done(false),()=>done(true))")
+                driver.execute("setTimeout(()=>{location.href='https://example.invalid/'},0)")
+                time.sleep(0.2)
+                assert driver.execute('return location.protocol') == 'tauri:'
+                print(f'PASS: native reader/drag, startup/second-instance CLI, refresh/deletion/recovery, IPC and navigation security; observed refresh {watch_ms} ms')
         except Exception:
-            print(driver.execute("return document.body.innerText"))
+            print(driver.execute("return {title: document.title, error: document.querySelector('#error-message')?.textContent}"))
             subprocess.run(["xwininfo", "-root", "-tree"], check=False)
             raise
         finally:

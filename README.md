@@ -49,7 +49,7 @@ The durable execution plan is [docs/implementation.md](docs/implementation.md). 
 | 2     | Secure Markdown rendering     | Validated                                                         |
 | 3     | Reading experience and RTL    | Validated                                                         |
 | 4     | Linux integration and refresh | Native and package smoke validated; manual desktop checks pending |
-| 5     | Security and robustness       | Pending                                                           |
+| 5     | Security and robustness       | Automated validation passed                                       |
 | 6     | Tests and performance         | Pending                                                           |
 | 7     | Packaging and release CI      | Pending                                                           |
 

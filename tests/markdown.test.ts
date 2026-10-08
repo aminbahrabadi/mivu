@@ -5,6 +5,31 @@ import { classifyReference } from '../src/core/links';
 import { loadImages } from '../src/ui/reader';
 
 describe('Markdown reading pipeline', () => {
+  it('does not attach stale image replies or lose the reason for missing images', async () => {
+    const article = document.createElement('article');
+    article.append(renderMarkdown('![missing](missing.png)'));
+    document.body.append(article);
+    await loadImages(article, async () => {
+      throw new Error('missing');
+    });
+    expect(article.textContent).toContain('Local image unavailable');
+    article.remove();
+    const detached = document.createElement('article');
+    detached.append(renderMarkdown('![old](old.png)'));
+    document.body.append(detached);
+    let resolve!: (value: string) => void;
+    const loading = loadImages(
+      detached,
+      () =>
+        new Promise((value) => {
+          resolve = value;
+        }),
+    );
+    detached.remove();
+    resolve('data:image/png;base64,AA==');
+    await loading;
+    expect(detached.querySelector('img')?.hasAttribute('src')).toBe(false);
+  });
   it('renders GFM tables, nested lists, task lists, strikeout and highlighting', () => {
     const html = renderMarkdown(
       '# Title\n\n~~old~~ **bold** *soft*\n\n- [x] done\n- [ ] next\n  - child\n\n| A | B |\n| - | - |\n| 1 | 2 |\n\n```rust\nfn main() {}\n```\n\nhttps://example.org',

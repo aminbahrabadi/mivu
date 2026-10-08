@@ -54,6 +54,31 @@ afterEach(() => {
 });
 
 describe('application document lifecycle', () => {
+  it('does not display stale startup or watcher errors after switching documents', async () => {
+    let resolve!: (value: {
+      document: DocumentSnapshot;
+      error: string;
+    }) => void;
+    native.invoke.mockReturnValueOnce(
+      new Promise((value) => {
+        resolve = value;
+      }),
+    );
+    const starting = startApp(root);
+    await vi.waitFor(() => {
+      expect(native.listeners.has('document-error')).toBe(true);
+    });
+    native.listeners.get('document-changed')!({
+      payload: { ...doc, id: 5, content: '# New' },
+    });
+    native.listeners.get('document-error')!({
+      payload: { id: 1, message: 'Stale' },
+    });
+    resolve({ document: doc, error: 'Old startup failure' });
+    dispose = await starting;
+    expect(root.querySelector('h1')?.textContent).toBe('New');
+    expect(root.querySelector<HTMLElement>('#error')?.hidden).toBe(true);
+  });
   it('ignores stale snapshots, switches documents, and keeps the old content on errors', async () => {
     dispose = await startApp(root);
     native.listeners.get('document-changed')!({

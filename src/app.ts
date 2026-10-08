@@ -80,6 +80,9 @@ export async function startApp(root: HTMLElement): Promise<() => void> {
       invoke<string>('read_image', { id: doc.id, reference }),
     );
   }
+  function showDocumentError(error: { id: number; message: string }): void {
+    if (!current || error.id >= current.id) showError(error.message);
+  }
   async function open(): Promise<void> {
     if (picking) return;
     picking = true;
@@ -195,8 +198,7 @@ export async function startApp(root: HTMLElement): Promise<() => void> {
   const unlistenError = await listen<{ id: number; message: string }>(
     'document-error',
     (event) => {
-      if (!current || event.payload.id >= current.id)
-        showError(event.payload.message);
+      showDocumentError(event.payload);
     },
   );
   const initial = await invoke<InitialState>('current_document');
@@ -204,7 +206,11 @@ export async function startApp(root: HTMLElement): Promise<() => void> {
     root.classList.toggle('drag-over', event.payload);
   });
   if (initial.document) display(initial.document);
-  if (initial.error) showError(initial.error);
+  if (initial.error)
+    showDocumentError({
+      id: initial.document?.id ?? 0,
+      message: initial.error,
+    });
   return () => {
     events.abort();
     disposeTheme();
