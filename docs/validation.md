@@ -25,6 +25,10 @@ This is evidence for release consideration, not a declaration of a fully validat
 
 The actual native suite checks the GTK picker, GTK URI drag source, Unicode/spaced paths, decoded local PNG, relative Markdown navigation, appearances, search/zoom, computed Persian/LTR directions, resizing, relative startup and second-instance CLI, file writes/atomic replacement/deletion/recovery, refresh scroll preservation, denied unrestricted filesystem IPC and rejected origin navigation. Fixture hashes are asserted unchanged. A private D-Bus session without service activation prevents interaction with the user's Mivu instance or host portal/keyring services. Accessibility-bus warnings in this isolated harness are expected; assistive-technology acceptance remains manual. The Debian mode extracts into an isolated XDG tree, validates its desktop entry, rebuilds only that private MIME database, identifies both extensions, and launches through `gio`. This is not a host dpkg installation or a human double-click test.
 
+## Desktop table-layout regression
+
+The post-merge table fix is checked against `tests/fixtures/tables.md`, a representative eight-column table, mixed Persian/English cells, and a long unbroken identifier. The native WebKit regression fails against the original release binary because headers and short values wrap into multiple lines. With the fix it passes in light/dark themes at 1000 and 560 pixel window widths, plus 180% reading zoom: labels stay on one line, descriptions retain readable line lengths, cell padding prevents overlap, wide tables scroll locally, and the reader does not overflow. The full native interaction suite also passes. Captures are generated under `test-results/tables-after/`; the user's original private document was not opened or copied.
+
 ## Performance methodology
 
 `pnpm bench` measures synchronous parse/highlight/sanitize/DOM-fragment creation in jsdom using representative GFM. Three minimum samples are not a statistical performance guarantee. These results must not be presented as native browser latency.
