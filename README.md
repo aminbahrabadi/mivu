@@ -241,7 +241,7 @@ Native automation runs the actual packaged WebKit application: GTK selection and
 
 Reproduce a failure with the same command and OS/WebKit versions. Native logs, screenshots, benchmark JSON, and package manifests are under ignored `test-results/`. A port collision or missing test package is a harness failure, not evidence that the application passed.
 
-Benchmarks generate representative GFM from `tests/fixtures/reading.md`. Native timings include second-instance IPC, parsing, sanitization, and DOM insertion, with three samples per size. Startup measures process-cold launches with warm OS caches, including WebDriver negotiation; it is not a disk-cold startup claim. Process-tree RSS double-counts shared pages. Measurements and conditions are recorded in [docs/validation.md](docs/validation.md); microbenchmarks under jsdom are not desktop timing predictions.
+Benchmarks generate representative GFM from `tests/fixtures/reading.md`. Native timings include second-instance IPC, parsing, sanitization, and DOM insertion, with three samples per size. Startup measures process-cold launches with warm OS caches, including WebDriver negotiation; it is not a disk-cold startup claim. Process-tree RSS double-counts shared pages. On the recorded Zorin/Xvfb baseline, median complete opening was about 115 ms for 8 KiB, 204 ms for 64 KiB, 1.08 s for 512 KiB, and 5.86 s for 2 MiB of dense GFM. The 2 MiB case used about 1.20 GiB of summed process-tree RSS, which double-counts shared pages; large DOMs remain a performance limit. Startup, first-content, scheduling gaps, memory and watcher measurements with full conditions are in [docs/validation.md](docs/validation.md). Microbenchmarks under jsdom are not desktop timing predictions.
 
 ## Building and releasing
 

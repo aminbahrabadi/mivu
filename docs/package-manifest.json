@@ -1,0 +1,14 @@
+[
+  {
+    "file": "Mivu_0.1.0_amd64.deb",
+    "bytes": 3691006,
+    "sha256": "2bf1cc95112466d14a1bedfaeebc20dbe29d8d896ca9f73265e5fd8a3310acbb",
+    "architecture": "amd64",
+    "depends": "libc6 (>= 2.39), libxdo3, shared-mime-info, libwebkit2gtk-4.1-0, libgtk-3-0"
+  },
+  {
+    "file": "Mivu_0.1.0_amd64.AppImage",
+    "bytes": 85309944,
+    "sha256": "033dbc728762365e5a17f9b71f8da83b05485e1c6a4cfdada750bceadd787921"
+  }
+]
