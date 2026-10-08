@@ -1,70 +1,37 @@
-import MarkdownIt from 'markdown-it';
-import tasks from 'markdown-it-task-lists';
-import hljs from 'highlight.js/lib/core';
-import bash from 'highlight.js/lib/languages/bash';
-import css from 'highlight.js/lib/languages/css';
-import javascript from 'highlight.js/lib/languages/javascript';
-import json from 'highlight.js/lib/languages/json';
-import python from 'highlight.js/lib/languages/python';
-import rust from 'highlight.js/lib/languages/rust';
-import typescript from 'highlight.js/lib/languages/typescript';
-import xml from 'highlight.js/lib/languages/xml';
+import { parser } from './parser';
 import { sanitizeHtml } from './security';
 import { classifyReference } from './links';
 
-for (const [name, grammar] of Object.entries({
-  bash,
-  css,
-  javascript,
-  json,
-  python,
-  rust,
-  typescript,
-  xml,
-}))
-  hljs.registerLanguage(name, grammar);
-
-const parser = new MarkdownIt({
-  html: false,
-  linkify: true,
-  highlight(code, language) {
-    if (language && hljs.getLanguage(language) && code.length <= 100_000) {
-      try {
-        return hljs.highlight(code, { language, ignoreIllegals: true }).value;
-      } catch {
-        /* Plain code remains readable. */
-      }
-    }
-    return '';
-  },
-}).use(tasks, { enabled: false });
-
-parser.validateLink = (value) =>
-  typeof value === 'string' && classifyReference(value).kind !== 'blocked';
-parser.renderer.rules.image = (tokens, index) => {
-  const token = tokens[index]!;
-  const source = token.attrGet('src');
-  const alt = parser.utils.escapeHtml(token.content);
-  return `<img data-image-ref="${parser.utils.escapeHtml(typeof source === 'string' ? source : '')}" alt="${alt}">`;
-};
-
 export function renderMarkdown(source: string): DocumentFragment {
-  const fragment = sanitizeHtml(parser.render(source));
-  const headings = new Map<string, number>();
+  return renderHtml(parser.render(source));
+}
+
+export function renderHtml(
+  html: string,
+  headings = new Set<string>(),
+): DocumentFragment {
+  const fragment = sanitizeHtml(html);
   for (const block of fragment.querySelectorAll(
     'h1,h2,h3,h4,h5,h6,p,li,blockquote,th,td',
   ))
     block.setAttribute('dir', 'auto');
   for (const code of fragment.querySelectorAll('code,pre'))
     code.setAttribute('dir', 'ltr');
+  for (const pre of fragment.querySelectorAll('pre')) {
+    pre.tabIndex = 0;
+    pre.setAttribute('role', 'region');
+    pre.setAttribute('aria-label', 'Scrollable code block');
+  }
   for (const heading of fragment.querySelectorAll('h1,h2,h3,h4,h5,h6')) {
     const slug = (heading.textContent ?? '')
       .toLowerCase()
       .replace(/[^\p{L}\p{N}\p{M}\s_-]/gu, '')
       .replace(/\s/g, '-');
-    const count = headings.get(slug) ?? 0;
-    headings.set(slug, count + 1);
-    heading.id = count === 0 ? slug : `${slug}-${count}`;
+    let id = slug || 'section';
+    let suffix = 0;
+    while (headings.has(id)) id = `${slug || 'section'}-${++suffix}`;
+    headings.add(id);
+    heading.id = id;
   }
   for (const link of fragment.querySelectorAll('a')) {
     if (classifyReference(link.getAttribute('href') ?? '').kind === 'blocked')

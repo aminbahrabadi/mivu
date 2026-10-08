@@ -38,7 +38,7 @@ Dependencies installed, lockfiles committed, frontend build/typecheck/lint and R
 
 ### Phase 3
 
-28 frontend tests passed with typecheck/lint/build. Native WebKit automation passed the actual picker, local raster decoding, local Markdown navigation, theme switching, search, zoom, Persian paragraph direction, LTR code and 560px window resizing. Original application screenshots captured and visually inspected in light/dark and mixed-language states. tests/native_smoke.py uses Python standard library with platform WebKitWebDriver and libxdo; no browser framework is needed for native coverage. Human long-session reading and accessibility assistive technology still need manual checks.
+28 frontend tests passed with typecheck/lint/build. Native WebKit automation passed the actual picker, local raster decoding, local Markdown navigation, theme switching, search, zoom, Persian paragraph direction, LTR code and 560px window resizing. Original application screenshots captured and visually inspected in light/dark and mixed-language states. scripts/native_smoke.py uses Python standard library with platform WebKitWebDriver and libxdo; no browser framework is needed for native coverage. Human long-session reading and accessibility assistive technology still need manual checks.
 
 ### Phase 4
 
@@ -47,3 +47,13 @@ Dependencies installed, lockfiles committed, frontend build/typecheck/lint and R
 ### Phase 5
 
 7 Rust tests, 30 frontend tests, Clippy, typecheck/lint/build passed. Actual GTK file drag/drop is now covered; installed Tauri source confirmed that the main-content webview emits synthesized WindowEvent::DragDrop. Native WebKit checks deny unrestricted filesystem IPC, reject a traversal image read and block navigation to an external origin. Permission failures, source replacement with an escaping symlink or FIFO, stale startup errors and detached image replies have regression tests. No private source content is logged. System WebKit/decoder vulnerabilities and denial-of-service remain outside a complete sandbox guarantee.
+
+### Phase 6 — QA checkpoint
+
+Performance exposed multi-second synchronous rendering of dense documents. Parsing/highlighting now runs in a dedicated worker, with complete-block batches sanitized on the main thread and animation-frame backpressure. Switches terminate obsolete workers. Regression tests cover batch equivalence (including reference definitions), sanitization/cancellation, heading collisions, and heading-link waits for event-started rendering. Current frontend suite: 33 tests; Rust suite: 7 tests. A final release-binary/package retest follows the last accessibility change.
+
+Wayland startup and computed Persian/LTR layout passed on the actual host display. Isolated X11 at GDK_SCALE=2 passed with devicePixelRatio=2 and no document overflow. This is automated display validation, not human assistive-technology/fractional-monitor acceptance.
+
+### Phase 7 — distribution checkpoint
+
+Optimized .deb and AppImage both built on Zorin/Ubuntu 24.04. Debian metadata records libc6 >= 2.39; readelf confirms the executable requires GLIBC_2.39. Package identity, integration files, dependency list, and AppImage type-2 header are asserted by scripts/inspect_packages.py. The final artifact hashes and native smoke evidence are recorded in docs/validation.md. CI uses Ubuntu 22.04 for an older build baseline and has pinned, narrowly permitted actions. Verified version tags create draft releases only; public publication requires manual release gates.

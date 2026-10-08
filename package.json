@@ -19,13 +19,15 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "bench": "vitest bench --run",
-    "test:e2e": "playwright test",
+    "bench": "vitest bench --run --reporter=verbose",
     "tauri": "tauri",
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
     "check:rust": "cargo fmt --manifest-path src-tauri/Cargo.toml --check && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings && cargo test --manifest-path src-tauri/Cargo.toml",
-    "package:deb": "tauri build --bundles deb",
-    "package:appimage": "tauri build --bundles appimage"
+    "package:deb": "python3 scripts/package_linux.py deb",
+    "package:appimage": "python3 scripts/package_linux.py appimage",
+    "test:native": "xvfb-run -a python3 scripts/native_smoke.py",
+    "bench:native": "xvfb-run -a python3 scripts/benchmark_native.py",
+    "package:linux": "python3 scripts/package_linux.py deb,appimage"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.12.1",

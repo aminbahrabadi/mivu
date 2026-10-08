@@ -21,7 +21,14 @@ pub fn open_selected(app: &AppHandle, path: &Path) -> Result<Document, String> {
     let mut session = state
         .lock()
         .map_err(|_| "The reader is busy. Please restart Mivu.")?;
-    let next = OpenDocument::selected(path, session.revision + 1)?;
+    let next = match OpenDocument::selected(path, session.revision + 1) {
+        Ok(next) => next,
+        Err(message) => {
+            session.error = Some(message.clone());
+            emit_error(app, session.revision, message.clone());
+            return Err(message);
+        }
+    };
     Ok(publish(app, &mut session, next))
 }
 

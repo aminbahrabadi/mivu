@@ -99,6 +99,14 @@ describe('Markdown reading pipeline', () => {
         renderMarkdown('# Hello\n\n# Hello\n\n# Hello').querySelectorAll('h1'),
       ).map((h) => h.id),
     ).toEqual(['hello', 'hello-1', 'hello-2']);
+    const ids = Array.from(
+      renderMarkdown(
+        '# Hello\n\n# Hello\n\n# Hello-1\n\n# !!!',
+      ).querySelectorAll('h1'),
+      (h) => h.id,
+    );
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.every(Boolean)).toBe(true);
   });
 });
 

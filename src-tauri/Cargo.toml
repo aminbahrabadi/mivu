@@ -6,7 +6,7 @@ authors = ["Amin Bahrabadi"]
 license = "MIT"
 repository = "https://github.com/aminbahrabadi/mivu"
 edition = "2021"
-rust-version = "1.88"
+rust-version = "1.90"
 
 [lib]
 name = "mivu_lib"

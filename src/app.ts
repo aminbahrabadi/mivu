@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type { DocumentSnapshot, InitialState } from './core/document';
 import { errorMessage } from './core/document';
-import { renderMarkdown } from './core/markdown';
+import { renderDocument } from './core/render-document';
 import { classifyReference } from './core/links';
 import { loadImages, scrollToFragment } from './ui/reader';
 import { emptyState } from './ui/empty-state';
@@ -47,35 +47,73 @@ export async function startApp(root: HTMLElement): Promise<() => void> {
   let current: DocumentSnapshot | null = null;
   let zoom = 100;
   let picking = false;
+  let rendering = new AbortController();
+  let pendingRender = Promise.resolve();
   function showError(error: unknown): void {
     root.querySelector<HTMLElement>('#error-message')!.textContent =
       errorMessage(error);
     alert.hidden = false;
   }
-  function display(doc: DocumentSnapshot): void {
-    if (current && doc.id <= current.id) return;
+  function display(doc: DocumentSnapshot): Promise<void> {
+    if (current && doc.id <= current.id)
+      return doc.id === current.id ? pendingRender : Promise.resolve();
+    pendingRender = renderSnapshot(doc);
+    return pendingRender;
+  }
+  async function renderSnapshot(doc: DocumentSnapshot): Promise<void> {
     const refresh = current?.path === doc.path;
     const scroll = reader.scrollTop;
     current = doc;
+    rendering.abort();
+    rendering = new AbortController();
+    const signal = rendering.signal;
     alert.hidden = true;
     title.textContent = doc.name;
     title.title = doc.path;
-    root.querySelector<HTMLButtonElement>('#find')!.disabled = false;
+    root.querySelector<HTMLButtonElement>('#find')!.disabled = true;
     root.querySelector<HTMLElement>('#document-status')!.textContent =
-      'Read-only';
+      'Opening…';
     const article = document.createElement('article');
     article.className = 'markdown';
-    if (doc.content.trim()) article.append(renderMarkdown(doc.content));
-    else {
-      const empty = document.createElement('p');
-      empty.className = 'empty-document';
-      empty.textContent = 'This document is empty.';
-      article.append(empty);
-    }
+    reader.setAttribute('aria-busy', 'true');
     reader.replaceChildren(article);
-    search.update(false);
-    reader.scrollTo({ top: refresh ? scroll : 0, behavior: 'instant' });
-    if (!refresh) reader.focus();
+    let positioned = false;
+    const position = (): void => {
+      search.update(false);
+      if (!positioned) {
+        reader.scrollTo({ top: refresh ? scroll : 0, behavior: 'instant' });
+        if (!refresh) reader.focus();
+        positioned = true;
+      }
+    };
+    try {
+      if (doc.content.trim()) {
+        await renderDocument(
+          doc.content,
+          (fragment) => {
+            article.append(fragment);
+            if (!refresh) position();
+          },
+          signal,
+        );
+      } else {
+        const empty = document.createElement('p');
+        empty.className = 'empty-document';
+        empty.textContent = 'This document is empty.';
+        article.append(empty);
+      }
+      if (signal.aborted) return;
+      position();
+    } catch (error) {
+      if (!signal.aborted) showError(error);
+    } finally {
+      if (!signal.aborted) {
+        reader.setAttribute('aria-busy', 'false');
+        root.querySelector<HTMLButtonElement>('#find')!.disabled = false;
+        root.querySelector<HTMLElement>('#document-status')!.textContent =
+          'Read-only';
+      }
+    }
     void loadImages(article, (reference) =>
       invoke<string>('read_image', { id: doc.id, reference }),
     );
@@ -86,15 +124,16 @@ export async function startApp(root: HTMLElement): Promise<() => void> {
   async function open(): Promise<void> {
     if (picking) return;
     picking = true;
+    const previousId = current?.id;
     for (const button of root.querySelectorAll<HTMLButtonElement>(
       '[data-action=open]',
     ))
       button.disabled = true;
     try {
       const doc = await invoke<DocumentSnapshot | null>('pick_document');
-      if (doc) display(doc);
+      if (doc) await display(doc);
     } catch (error) {
-      showError(error);
+      if (previousId === current?.id) showError(error);
     } finally {
       picking = false;
       for (const button of root.querySelectorAll<HTMLButtonElement>(
@@ -166,8 +205,9 @@ export async function startApp(root: HTMLElement): Promise<() => void> {
           id: current.id,
           reference: reference.path,
         });
-        display(doc);
-        if (reference.fragment) scrollToFragment(reader, reference.fragment);
+        await display(doc);
+        if (reference.fragment && current?.id === doc.id)
+          scrollToFragment(reader, reference.fragment);
       } else if (reference.kind === 'external' && event.isTrusted)
         await invoke('open_external', { url: reference.url });
       else if (reference.kind === 'blocked') showError(reference.reason);
@@ -192,7 +232,7 @@ export async function startApp(root: HTMLElement): Promise<() => void> {
   const unlistenDocument = await listen<DocumentSnapshot>(
     'document-changed',
     (event) => {
-      display(event.payload);
+      void display(event.payload);
     },
   );
   const unlistenError = await listen<{ id: number; message: string }>(
@@ -205,7 +245,7 @@ export async function startApp(root: HTMLElement): Promise<() => void> {
   const unlistenDrag = await listen<boolean>('drag-active', (event) => {
     root.classList.toggle('drag-over', event.payload);
   });
-  if (initial.document) display(initial.document);
+  if (initial.document) await display(initial.document);
   if (initial.error)
     showDocumentError({
       id: initial.document?.id ?? 0,
@@ -213,6 +253,7 @@ export async function startApp(root: HTMLElement): Promise<() => void> {
     });
   return () => {
     events.abort();
+    rendering.abort();
     disposeTheme();
     unlistenDocument();
     unlistenError();

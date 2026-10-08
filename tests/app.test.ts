@@ -50,10 +50,53 @@ afterEach(() => {
   dispose = undefined;
   root.remove();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   native.listeners.clear();
 });
 
 describe('application document lifecycle', () => {
+  it('waits for an event-started render before following a linked heading', async () => {
+    native.invoke.mockResolvedValueOnce({
+      document: { ...doc, content: '[Section](second.md#target)' },
+      error: null,
+    });
+    dispose = await startApp(root);
+    class TestWorker {
+      static instance: TestWorker;
+      onmessage?: (event: MessageEvent) => void;
+      postMessage = vi.fn();
+      terminate = vi.fn();
+      constructor() {
+        TestWorker.instance = this;
+      }
+    }
+    vi.stubGlobal('Worker', TestWorker);
+    const next = {
+      ...doc,
+      id: 2,
+      name: 'second.md',
+      path: '/selected/second.md',
+      content: '# Target',
+    };
+    native.invoke.mockImplementationOnce(() => {
+      native.listeners.get('document-changed')!({ payload: next });
+      return Promise.resolve(next);
+    });
+    root.querySelector<HTMLAnchorElement>('a')!.click();
+    await Promise.resolve();
+    expect(root.querySelector('#target')).toBeNull();
+    TestWorker.instance.onmessage?.(
+      new MessageEvent('message', {
+        data: { html: '<h1>Target</h1>', done: true },
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledWith({
+        block: 'start',
+      }),
+    );
+    expect(root.querySelector('#target')?.textContent).toBe('Target');
+  });
   it('does not display stale startup or watcher errors after switching documents', async () => {
     let resolve!: (value: {
       document: DocumentSnapshot;
@@ -113,8 +156,10 @@ describe('application document lifecycle', () => {
     native.listeners.get('document-changed')!({
       payload: { ...doc, id: 2, content: '# Hello\n\nA quiet place again.' },
     });
-    expect(document.activeElement).toBe(input);
-    expect(root.querySelector('mark')?.textContent).toBe('quiet');
+    await vi.waitFor(() => {
+      expect(document.activeElement).toBe(input);
+      expect(root.querySelector('mark')?.textContent).toBe('quiet');
+    });
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(root.querySelector<HTMLElement>('#search-bar')?.hidden).toBe(true);
     document.dispatchEvent(

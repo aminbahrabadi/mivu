@@ -9,6 +9,13 @@ use std::sync::Mutex;
 use tauri::{Emitter, Manager};
 
 pub fn run() {
+    // AppRun changes cwd; restore it before single-instance forwarding captures it.
+    #[cfg(target_os = "linux")]
+    if let Some(directory) = std::env::var_os("APPIMAGE").and_then(|_| std::env::var_os("OWD")) {
+        if std::env::set_current_dir(directory).is_err() {
+            eprintln!("Could not restore the AppImage launch directory.");
+        }
+    }
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
             let app = app.clone();
@@ -18,9 +25,7 @@ pub fn run() {
                     std::path::Path::new(&cwd),
                 ) {
                     Ok(Some(path)) => {
-                        if let Err(error) = open_selected(&app, &path) {
-                            report_error(&app, error);
-                        }
+                        let _ = open_selected(&app, &path);
                     }
                     Ok(None) => {}
                     Err(error) => report_error(&app, error),
@@ -52,9 +57,7 @@ pub fn run() {
                     .and_then(|cwd| cli::document_argument(std::env::args_os(), &cwd))
                 {
                     Ok(Some(path)) => {
-                        if let Err(error) = open_selected(&handle, &path) {
-                            report_error(&handle, error);
-                        }
+                        let _ = open_selected(&handle, &path);
                     }
                     Ok(None) => {}
                     Err(error) => report_error(&handle, error),
@@ -81,9 +84,7 @@ pub fn run() {
                         let app = window.app_handle().clone();
                         let path = path.clone();
                         tauri::async_runtime::spawn_blocking(move || {
-                            if let Err(error) = open_selected(&app, &path) {
-                                report_error(&app, error);
-                            }
+                            let _ = open_selected(&app, &path);
                         });
                     }
                 }

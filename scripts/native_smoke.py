@@ -4,6 +4,7 @@ import argparse
 import base64
 import ctypes
 import json
+import hashlib
 import os
 from pathlib import Path
 import subprocess
@@ -50,7 +51,7 @@ class Driver:
 
     def screenshot(self, name):
         image = self.request('GET', f'/session/{self.session}/screenshot')
-        output = ROOT / 'docs/screenshots' / name
+        output = self.screenshot_directory / name
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_bytes(base64.b64decode(image))
 
@@ -131,7 +132,9 @@ def main():
     parser.add_argument('--binary', type=Path, default=ROOT / 'src-tauri/target/debug/mivu')
     parser.add_argument('--port', type=int, default=4446)
     parser.add_argument('--deb', type=Path)
+    parser.add_argument('--screenshots', type=Path, default=ROOT / 'test-results/screenshots')
     args = parser.parse_args()
+    fixture_hashes = {p: hashlib.sha256(p.read_bytes()).digest() for p in (ROOT / "tests/fixtures").rglob("*") if p.is_file()}
     env = os.environ | {'TAURI_WEBVIEW_AUTOMATION': 'true', 'GDK_BACKEND': 'x11'}
     profile = ROOT / 'test-results/native-profile'
     if args.deb:
@@ -146,6 +149,7 @@ def main():
     for kind in ('data', 'config', 'cache'):
         env[f'XDG_{kind.upper()}_HOME'] = str(profile / kind)
     driver = Driver(args.port)
+    driver.screenshot_directory = args.screenshots
     log_path = ROOT / 'test-results/native-driver.log'
     log_path.parent.mkdir(exist_ok=True)
     with log_path.open('w') as log:
@@ -204,6 +208,8 @@ def main():
                 original_scroll = driver.execute('return document.querySelector("#reader").scrollTop')
                 drag = folder / 'dropped.markdown'
                 drag.write_text('# Dropped document')
+                if args.deb:
+                    assert subprocess.check_output(['xdg-mime', 'query', 'filetype', str(drag)], env=env, text=True).strip() == 'text/markdown'
                 drag_file(drag, env)
                 wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Dropped document')
                 subprocess.run([str(args.binary.resolve()), str(path)], env=env, check=True, timeout=10)
@@ -243,6 +249,7 @@ def main():
                 driver.execute("setTimeout(()=>{location.href='https://example.invalid/'},0)")
                 time.sleep(0.2)
                 assert driver.execute('return location.protocol') == 'tauri:'
+                assert all(hashlib.sha256(p.read_bytes()).digest() == digest for p, digest in fixture_hashes.items()), 'Source fixtures were modified'
                 print(f'PASS: native reader/drag, startup/second-instance CLI, refresh/deletion/recovery, IPC and navigation security; observed refresh {watch_ms} ms')
         except Exception:
             print(driver.execute("return {title: document.title, error: document.querySelector('#error-message')?.textContent}"))

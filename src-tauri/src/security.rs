@@ -56,6 +56,8 @@ mod tests {
         assert!(allowed_navigation(
             &url::Url::parse("tauri://localhost/#heading").unwrap()
         ));
-        assert!(allowed_navigation(&url::Url::parse("tauri://localhost").unwrap()));
+        assert!(allowed_navigation(
+            &url::Url::parse("tauri://localhost").unwrap()
+        ));
     }
 }
