@@ -5,14 +5,14 @@ integration of the supplied Firefox sources, without changing submitted runtime
 files. The integration branch starts at completed Desktop commit `2a9849b` and
 will target `feat/linux-v0.1` until the Desktop PR is merged.
 
-| Phase                                 | Status                               | Evidence                                                                                                                                                                |
-| ------------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Inspection and source verification | Complete                             | Both ZIP inventories checked for unsafe paths, symlinks and duplicates. Original Python build reproduces all 11 submitted file paths and bytes.                         |
-| 2. Repository integration             | Complete                             | Original `firefox/app/` and build script imported; runtime hashes recorded in `releases/v0.1.0-submitted.json`. Separate worktree preserves ongoing Desktop work.       |
-| 3. Security and functional audit      | Complete with documented limitations | Reader pipeline/dependencies reviewed; adversarial Node/jsdom tests and actual Firefox smoke passed. Historical race/resource/provenance gaps are recorded in audit.md. |
-| 4. Build and CI                       | Complete locally                     | Offline deterministic packages and Python regressions pass; source ZIP rebuild verified; workflow passes actionlint. Remote CI will run on the PR.                      |
-| 5. Documentation and design           | Complete                             | Root/Firefox READMEs, contributor/security/agent rules and platform differences documented; real screenshots supplied.                                                  |
-| 6. Final verification                 | Pending                              | Automated checks, archive preservation and review PR.                                                                                                                   |
+| Phase                                 | Status                                | Evidence                                                                                                                                                                |
+| ------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Inspection and source verification | Complete                              | Both ZIP inventories checked for unsafe paths, symlinks and duplicates. Original Python build reproduces all 11 submitted file paths and bytes.                         |
+| 2. Repository integration             | Complete                              | Original `firefox/app/` and build script imported; runtime hashes recorded in `releases/v0.1.0-submitted.json`. Separate worktree preserves ongoing Desktop work.       |
+| 3. Security and functional audit      | Complete with documented limitations  | Reader pipeline/dependencies reviewed; adversarial Node/jsdom tests and actual Firefox smoke passed. Historical race/resource/provenance gaps are recorded in audit.md. |
+| 4. Build and CI                       | Complete locally                      | Offline deterministic packages and Python regressions pass; source ZIP rebuild verified; workflow passes actionlint. Remote CI will run on the PR.                      |
+| 5. Documentation and design           | Complete                              | Root/Firefox READMEs, contributor/security/agent rules and platform differences documented; real screenshots supplied.                                                  |
+| 6. Final verification                 | Complete locally; review PR available | All local checks passed, originals preserved, clean commits pushed as aminbahrabadi; PR #2 targets the Desktop integration branch.                                      |
 
 The source archive SHA-256 is
 `42ef4f1601668ea4553aaad1aa27af30e9dd6883c3862f8168014af2cd333a63`.
@@ -50,3 +50,16 @@ geckodriver 0.37.1. Existing root dependencies installed with
 
 No AMO publication, public release, main merge, permission expansion or desktop
 runtime change is part of this integration. Source/AMO originals remain unchanged.
+
+## Review handoff
+
+[PR #2](https://github.com/aminbahrabadi/mivu/pull/2) was opened by **aminbahrabadi**
+against `feat/linux-v0.1`, stacked on Desktop PR #1. Both the branch-push and PR
+Firefox workflows passed at documentation commit `06be123`. Later commits run
+the same checks again; consult the PR's current checks for final-head status.
+The existing Desktop workflow also runs on the PR, without code changes to its
+native implementation. No PR is merged automatically.
+
+The integration is available for review; a subsequent Firefox release still
+needs the documented vendor-source/license work, race/resource corrections and
+manual/platform acceptance. This does not change the pending AMO submission.

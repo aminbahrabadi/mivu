@@ -13,7 +13,7 @@ regression and browser checks, not a guarantee against vulnerabilities.
 2. Reader file input/drop supplies a browser `File`, not a filesystem path.
    `readMarkdown` checks `.md`/`.markdown` and 8 MiB before allocating, rejects
    invalid UTF-8 with a fatal decoder, and strips a BOM. There is no write or
-   network API. A busy flag serializes Markdown reads; failed reads retain the
+   network API. A busy flag ignores additional opens during a pending read; failed reads retain the
    previous view. No directory scanning or content script exists.
 3. Marked's raw-HTML renderer returns an empty string. Links are emitted only
    for HTTP(S)/mailto classifications, with escaped attributes; local/anchor/
