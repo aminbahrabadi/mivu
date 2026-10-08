@@ -2,7 +2,61 @@
   "version": "0.1.0",
   "source_archive": {
     "filename": "mivu-firefox-source-v0.1.0-security-fixed.zip",
-    "sha256": "42ef4f1601668ea4553aaad1aa27af30e9dd6883c3862f8168014af2cd333a63"
+    "sha256": "42ef4f1601668ea4553aaad1aa27af30e9dd6883c3862f8168014af2cd333a63",
+    "files": {
+      "firefox/README.md": {
+        "bytes": 2261,
+        "sha256": "dc73f375ff550a280331da06085ab38a07c00842ae1eebd8d18d0d7d92082f31"
+      },
+      "firefox/app/background.js": {
+        "bytes": 200,
+        "sha256": "781cf1155cb02e2dd56ce4eacd8997ed74e61788b70caf6937ab55ff37fe742b"
+      },
+      "firefox/app/icons/mivu.svg": {
+        "bytes": 247,
+        "sha256": "b1d25d54ca38d59dc7f36e4126a8e746d0d717c200f1b9ed4076989e4e1adb93"
+      },
+      "firefox/app/manifest.json": {
+        "bytes": 956,
+        "sha256": "9c05ceb70027cb19843ba2bb561e711d137a8386a83ba3f4cb07a6096cfce47d"
+      },
+      "firefox/app/reader.html": {
+        "bytes": 3290,
+        "sha256": "6cdb0b32cb200d79aa2091a8251bd41a3e7064d8eadff5518e36cb3a4b05c0d9"
+      },
+      "firefox/app/reader.js": {
+        "bytes": 16213,
+        "sha256": "7175fd1137385156530ed51646d81038859cc8af118060b1b1825a28d25b323a"
+      },
+      "firefox/app/safety.mjs": {
+        "bytes": 2148,
+        "sha256": "a2801667a64cf60a925626c015593ebc6946ef2e9066ce8c73f688264083ae57"
+      },
+      "firefox/app/styles.css": {
+        "bytes": 7472,
+        "sha256": "3c2e100f508ce96ebb6659626ef3b4c9dd02c6ae073ddd234ecdbcd43004270e"
+      },
+      "firefox/app/vendor/LICENSE-highlight.txt": {
+        "bytes": 175,
+        "sha256": "9cb5f23dd2f682113dfa11aeefe14578118577f4b595dc9d3f68b1cee11b76aa"
+      },
+      "firefox/app/vendor/LICENSE-marked.txt": {
+        "bytes": 2942,
+        "sha256": "8e3a3f82f59a60958f56ca08f445647c32a4733dc7ca6c2c46f6eb898471ab9c"
+      },
+      "firefox/app/vendor/highlight.min.js": {
+        "bytes": 132023,
+        "sha256": "a55fbc92ce29f59e8129fdb3cf97634a6e18363d8d344ec5bded08c9a76d931d"
+      },
+      "firefox/app/vendor/marked.js": {
+        "bytes": 98105,
+        "sha256": "91e90d63828ffe48d7ab281a4005f512e6b069b01a9e3b18aa69a0b2a4f2f317"
+      },
+      "firefox/tools/build_amo.py": {
+        "bytes": 1047,
+        "sha256": "f92e29b4e9a0b2d0d5174b30a2987e88c1818ed11f42251f474bc0426bc2b4cd"
+      }
+    }
   },
   "submitted_archive": {
     "filename": "mivu-firefox-AMO-upload-v0.1.0-security-fixed.zip",
