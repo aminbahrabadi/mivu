@@ -95,8 +95,7 @@ def choose_native_file(path):
     lib.xdo_send_keysequence_window(handle, 0, b'ctrl+l', 50000)
     lib.xdo_send_keysequence_window(handle, 0, b'ctrl+a', 50000)
     lib.xdo_enter_text_window(handle, 0, str(path).encode(), 50000)
-    lib.xdo_move_mouse_relative_to_window(handle, window, 850, 678)
-    lib.xdo_click_window(handle, 0, 1)
+    lib.xdo_send_keysequence_window(handle, 0, b'Return', 50000)
     lib.xdo_free(handle)
 
 
@@ -202,7 +201,7 @@ def main():
                     assert mime == 'text/markdown', mime
                     subprocess.run(['gio', 'launch', str(extracted / 'usr/share/applications/Mivu.desktop'), str(path)], env=env, check=True, timeout=10)
                     wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Initial')
-                subprocess.run([str(args.binary.resolve()), path.name], cwd=folder, env=env, check=True, timeout=10)
+                subprocess.run([str(args.binary.resolve()), path.name], cwd=folder, env=env | {'PWD': str(folder)}, check=True, timeout=10)
                 wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Initial')
                 driver.execute('document.querySelector("#reader").scrollTo({top:200,behavior:"instant"})')
                 original_scroll = driver.execute('return document.querySelector("#reader").scrollTop')
@@ -231,7 +230,7 @@ def main():
                 path.write_text('# Restored' + long_text)
                 wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Restored')
                 assert driver.execute('return document.querySelector("#error").hidden')
-                subprocess.run([str(args.binary.resolve()), 'missing.md'], cwd=folder, env=env, check=True, timeout=10)
+                subprocess.run([str(args.binary.resolve()), 'missing.md'], cwd=folder, env=env | {'PWD': str(folder)}, check=True, timeout=10)
                 wait_for(lambda: driver.execute('return !document.querySelector("#error").hidden'))
                 assert driver.execute('return document.querySelector("h1")?.textContent') == 'Restored'
                 driver.request('DELETE', f'/session/{driver.session}')

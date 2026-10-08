@@ -39,7 +39,7 @@ Final measurements are stored alongside this report after the final optimized re
 
 Debian installs `/usr/bin/mivu`, the Mivu desktop launcher, hicolor icons, Markdown MIME XML and the original MIT license. Maintainer scripts update desktop/MIME databases without changing user defaults. Local metadata conservatively requires `libc6 >= 2.39`, matching the binary's highest GLIBC symbol. The local packages are for the Ubuntu 24.04/Zorin baseline; they cannot establish Ubuntu 22.04 or Debian 12 compatibility.
 
-AppImage bundling uses upstream Linuxdeploy tools and extraction mode on this host. Testing found that AppRun changed the working directory, breaking relative CLI arguments. Mivu restores the runtime-provided original directory before single-instance initialization; the full AppImage native suite is the regression check. FUSE mounting and a clean different host remain separate acceptance checks.
+AppImage bundling uses upstream Linuxdeploy tools and extraction mode on this host. Testing found that AppRun changed the working directory, breaking relative CLI arguments. Mivu restores the runtime-provided original directory (`OWD`, falling back to preserved `PWD` for older extraction runtimes) before single-instance initialization; the full AppImage native suite is the regression check. FUSE mounting and a clean different host remain separate acceptance checks.
 
 ## Remaining release gates
 

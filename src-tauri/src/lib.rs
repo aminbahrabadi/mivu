@@ -11,7 +11,9 @@ use tauri::{Emitter, Manager};
 pub fn run() {
     // AppRun changes cwd; restore it before single-instance forwarding captures it.
     #[cfg(target_os = "linux")]
-    if let Some(directory) = std::env::var_os("APPIMAGE").and_then(|_| std::env::var_os("OWD")) {
+    if let Some(directory) = std::env::var_os("APPIMAGE")
+        .and_then(|_| std::env::var_os("OWD").or_else(|| std::env::var_os("PWD")))
+    {
         if std::env::set_current_dir(directory).is_err() {
             eprintln!("Could not restore the AppImage launch directory.");
         }
