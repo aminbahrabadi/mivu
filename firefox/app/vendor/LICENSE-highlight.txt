@@ -1,0 +1,4 @@
+highlight.js version 11.0.1
+Copyright (c) 2006-2021 Ivan Sagalaev and other contributors
+License: BSD 3-Clause
+https://github.com/highlightjs/highlight.js/blob/11.0.1/LICENSE
