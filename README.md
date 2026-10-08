@@ -113,6 +113,8 @@ Install Rust stable with rustup and Node.js 24.12 or later (Node 24 LTS recommen
 npm install --global pnpm@12.10.1
 git clone https://github.com/aminbahrabadi/mivu.git
 cd mivu
+# Until the candidate PR is merged:
+git switch feat/linux-v0.1
 pnpm install --frozen-lockfile
 pnpm tauri dev
 ```
@@ -122,7 +124,7 @@ If global npm installation is inappropriate, run commands through `npm exec --ye
 For native automated tests:
 
 ```sh
-sudo apt install --no-install-recommends webkit2gtk-driver xvfb xauth python3-gi gir1.2-gtk-3.0 x11-utils desktop-file-utils shared-mime-info
+sudo apt install --no-install-recommends dbus-daemon webkit2gtk-driver xvfb xauth python3-gi gir1.2-gtk-3.0 x11-utils desktop-file-utils shared-mime-info
 pnpm tauri build --debug --no-bundle --ci -- --locked
 pnpm test:native
 ```
@@ -235,7 +237,7 @@ pnpm bench:native      # after building the release binary
 
 Frontend tests exercise GFM, malicious HTML/URLs, reference classification, direction attributes, heading anchors, search across formatting, theme selection, failed opens, refresh state, and stale responses. Rust tests exercise limits, UTF-8, supported extensions, permission errors, regular-file validation, relative capability boundaries, symlinks/FIFOs, CLI paths, external URLs, navigation, and watcher replacement/debounce/cleanup.
 
-Native automation runs the actual packaged WebKit application: GTK selection and file drag, local raster decoding, link navigation, RTL/LTR computed directions, resizing, search/zoom, second-instance and startup arguments, external writes/atomic saves/deletion/recovery, package launcher/MIME identification, denied filesystem IPC, and blocked origin navigation. It uses copied temporary documents and isolated XDG state; it never changes your default handler.
+Native automation runs the actual packaged WebKit application: GTK selection and file drag, local raster decoding, link navigation, RTL/LTR computed directions, resizing, search/zoom, second-instance and startup arguments, external writes/atomic saves/deletion/recovery, package launcher/MIME identification, denied filesystem IPC, and blocked origin navigation. It uses copied temporary documents, isolated XDG state, and a private D-Bus session without host service activation; it never changes your default handler.
 
 Reproduce a failure with the same command and OS/WebKit versions. Native logs, screenshots, benchmark JSON, and package manifests are under ignored `test-results/`. A port collision or missing test package is a harness failure, not evidence that the application passed.
 
@@ -255,7 +257,7 @@ python3 scripts/inspect_packages.py
 Outputs are under `src-tauri/target/release/bundle/deb/` and `appimage/`. The package helper supplies a conservative host glibc dependency and locked Rust resolution. AppImage bundling downloads upstream Linuxdeploy tools and can require the extraction environment setting shown above. Package inspection asserts identity, integration files, dependencies, and AppImage headers, then records SHA-256 checksums. To exercise the Debian package without installing it:
 
 ```sh
-xvfb-run -a python3 scripts/native_smoke.py --deb src-tauri/target/release/bundle/deb/Mivu_0.1.0_amd64.deb
+dbus-run-session --config-file=scripts/dbus-test.conf -- xvfb-run -a python3 scripts/native_smoke.py --deb src-tauri/target/release/bundle/deb/Mivu_0.1.0_amd64.deb
 ```
 
 GitHub Actions runs frontend/Rust quality and native WebKit tests on pull requests. Branch/manual/tag builds additionally produce packages on Ubuntu 22.04, smoke-test Debian and AppImage packages, inspect artifacts, and upload them. Actions are pinned to commit SHAs, checkout credentials are not persisted, and ordinary jobs have read-only repository permissions.

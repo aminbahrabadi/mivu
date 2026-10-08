@@ -25,8 +25,8 @@
     "check:rust": "cargo fmt --manifest-path src-tauri/Cargo.toml --check && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings && cargo test --manifest-path src-tauri/Cargo.toml",
     "package:deb": "python3 scripts/package_linux.py deb",
     "package:appimage": "python3 scripts/package_linux.py appimage",
-    "test:native": "xvfb-run -a python3 scripts/native_smoke.py",
-    "bench:native": "xvfb-run -a python3 scripts/benchmark_native.py",
+    "test:native": "dbus-run-session --config-file=scripts/dbus-test.conf -- xvfb-run -a python3 scripts/native_smoke.py",
+    "bench:native": "dbus-run-session --config-file=scripts/dbus-test.conf -- xvfb-run -a python3 scripts/benchmark_native.py",
     "package:linux": "python3 scripts/package_linux.py deb,appimage"
   },
   "dependencies": {

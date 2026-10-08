@@ -26,6 +26,10 @@ def wait_for(check, timeout=10):
     raise AssertionError('Timed out waiting for native application state')
 
 
+def document_ready(driver, title):
+    return driver.execute('return document.querySelector("article h1")?.textContent === arguments[0] && document.querySelector("#reader").getAttribute("aria-busy") !== "true"', title)
+
+
 class Driver:
     def __init__(self, port):
         self.base = f'http://127.0.0.1:{port}'
@@ -96,6 +100,8 @@ def choose_native_file(path):
     lib.xdo_send_keysequence_window(handle, 0, b'ctrl+a', 50000)
     lib.xdo_enter_text_window(handle, 0, str(path).encode(), 50000)
     lib.xdo_send_keysequence_window(handle, 0, b'Return', 50000)
+    time.sleep(0.2)
+    lib.xdo_send_keysequence_window(handle, 0, b'alt+o', 50000)
     lib.xdo_free(handle)
 
 
@@ -166,7 +172,7 @@ def main():
             driver.screenshot('empty-light.png')
             driver.execute('document.querySelector("[data-action=open]").click()')
             choose_native_file(ROOT / 'tests/fixtures/reading.md')
-            wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Reading, without the noise')
+            wait_for(lambda: document_ready(driver, 'Reading, without the noise'))
             wait_for(lambda: driver.execute('return document.querySelector("article img")?.naturalWidth') == 32)
             driver.execute('document.activeElement.blur()')
             driver.screenshot('reader-light.png')
@@ -180,10 +186,10 @@ def main():
             assert driver.execute('return document.querySelector("#zoom-status").textContent') == '110%'
             driver.execute('document.dispatchEvent(new KeyboardEvent("keydown", {key:"0",ctrlKey:true}))')
             driver.execute("Array.from(document.querySelectorAll('a')).find(a => a.getAttribute('href').startsWith('second.md')).click()")
-            wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'The next page')
+            wait_for(lambda: document_ready(driver, 'The next page'))
             driver.execute('document.querySelector("[data-action=open]").click()')
             choose_native_file(ROOT / 'tests/fixtures/persian.md')
-            wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'کمی فضا برای خواندن')
+            wait_for(lambda: document_ready(driver, 'کمی فضا برای خواندن'))
             assert driver.execute('return getComputedStyle(document.querySelector("article p")).direction') == 'rtl'
             assert driver.execute('return getComputedStyle(document.querySelector("pre")).direction') == 'ltr'
             driver.execute('document.activeElement.blur()')
@@ -200,9 +206,9 @@ def main():
                     mime = subprocess.check_output(['xdg-mime', 'query', 'filetype', str(path)], env=env, text=True).strip()
                     assert mime == 'text/markdown', mime
                     subprocess.run(['gio', 'launch', str(extracted / 'usr/share/applications/Mivu.desktop'), str(path)], env=env, check=True, timeout=10)
-                    wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Initial')
+                    wait_for(lambda: document_ready(driver, 'Initial'))
                 subprocess.run([str(args.binary.resolve()), path.name], cwd=folder, env=env | {'PWD': str(folder)}, check=True, timeout=10)
-                wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Initial')
+                wait_for(lambda: document_ready(driver, 'Initial'))
                 driver.execute('document.querySelector("#reader").scrollTo({top:200,behavior:"instant"})')
                 original_scroll = driver.execute('return document.querySelector("#reader").scrollTop')
                 drag = folder / 'dropped.markdown'
@@ -210,25 +216,25 @@ def main():
                 if args.deb:
                     assert subprocess.check_output(['xdg-mime', 'query', 'filetype', str(drag)], env=env, text=True).strip() == 'text/markdown'
                 drag_file(drag, env)
-                wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Dropped document')
+                wait_for(lambda: document_ready(driver, 'Dropped document'))
                 subprocess.run([str(args.binary.resolve()), str(path)], env=env, check=True, timeout=10)
-                wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Initial')
+                wait_for(lambda: document_ready(driver, 'Initial'))
                 driver.execute('document.querySelector("#reader").scrollTo({top:200,behavior:"instant"})')
                 original_scroll = driver.execute('return document.querySelector("#reader").scrollTop')
                 before = time.monotonic()
                 path.write_text('# Updated' + long_text)
-                wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Updated')
+                wait_for(lambda: document_ready(driver, 'Updated'))
                 watch_ms = round((time.monotonic() - before) * 1000, 1)
                 assert abs(driver.execute('return document.querySelector("#reader").scrollTop') - original_scroll) < 2
                 replacement = folder / 'atomic.tmp'
                 replacement.write_text('# Atomic replacement' + long_text)
                 replacement.replace(path)
-                wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Atomic replacement')
+                wait_for(lambda: document_ready(driver, 'Atomic replacement'))
                 path.unlink()
                 wait_for(lambda: driver.execute('return !document.querySelector("#error").hidden'))
                 assert driver.execute('return document.querySelector("h1")?.textContent') == 'Atomic replacement'
                 path.write_text('# Restored' + long_text)
-                wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Restored')
+                wait_for(lambda: document_ready(driver, 'Restored'))
                 assert driver.execute('return document.querySelector("#error").hidden')
                 subprocess.run([str(args.binary.resolve()), 'missing.md'], cwd=folder, env=env | {'PWD': str(folder)}, check=True, timeout=10)
                 wait_for(lambda: driver.execute('return !document.querySelector("#error").hidden'))
@@ -238,9 +244,9 @@ def main():
                 result = driver.request('POST', '/session', {'capabilities': {'alwaysMatch': {
                     'webkitgtk:browserOptions': {'binary': str(args.binary.resolve()), 'args': [str(path)]}}}})
                 driver.session = result['sessionId']
-                wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Restored')
+                wait_for(lambda: document_ready(driver, 'Restored'))
                 subprocess.run([str(args.binary.resolve()), str(ROOT / 'tests/fixtures/adversarial.md')], env=env, check=True, timeout=10)
-                wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Untrusted input')
+                wait_for(lambda: document_ready(driver, 'Untrusted input'))
                 assert driver.execute('return !window.__mivuPwned && !document.querySelector("article script,article iframe,article object,article svg")')
                 assert driver.execute('return !document.querySelector("article img[src^=http]")')
                 assert driver.execute_async("const done=arguments[arguments.length-1]; window.__TAURI_INTERNALS__.invoke('plugin:fs|read_text_file', {path:'/etc/passwd'}).then(()=>done(false),()=>done(true))")
@@ -251,7 +257,9 @@ def main():
                 assert all(hashlib.sha256(p.read_bytes()).digest() == digest for p, digest in fixture_hashes.items()), 'Source fixtures were modified'
                 print(f'PASS: native reader/drag, startup/second-instance CLI, refresh/deletion/recovery, IPC and navigation security; observed refresh {watch_ms} ms')
         except Exception:
-            print(driver.execute("return {title: document.title, error: document.querySelector('#error-message')?.textContent}"))
+            subprocess.run(['/usr/bin/python3', str(ROOT / 'scripts/capture_display.py'), str(ROOT / 'test-results/native-display.png')], check=False)
+            if driver.session:
+                print(driver.execute("return {title: document.title, error: document.querySelector('#error-message')?.textContent}"))
             subprocess.run(["xwininfo", "-root", "-tree"], check=False)
             raise
         finally:
