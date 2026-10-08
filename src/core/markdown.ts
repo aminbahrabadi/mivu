@@ -12,9 +12,9 @@ export function renderHtml(
 ): DocumentFragment {
   const fragment = sanitizeHtml(html);
   for (const block of fragment.querySelectorAll(
-    'h1,h2,h3,h4,h5,h6,p,li,blockquote,th,td',
+    'h1,h2,h3,h4,h5,h6,p,li,ul,ol,blockquote,th,td',
   ))
-    block.setAttribute('dir', 'auto');
+    block.setAttribute('dir', readingDirection(block));
   for (const code of fragment.querySelectorAll('code,pre'))
     code.setAttribute('dir', 'ltr');
   for (const pre of fragment.querySelectorAll('pre')) {
@@ -48,4 +48,35 @@ export function renderHtml(
     wrapper.append(table);
   }
   return fragment;
+}
+
+function readingDirection(block: Element): 'rtl' | 'ltr' | 'auto' {
+  const walker = block.ownerDocument.createTreeWalker(
+    block,
+    NodeFilter.SHOW_TEXT,
+  );
+  const parts: string[] = [];
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const excluded = node.parentElement?.closest('code,pre,ul,ol');
+    parts.push(
+      excluded && excluded !== block && block.contains(excluded)
+        ? ' '
+        : (node.textContent ?? ''),
+    );
+  }
+  const words =
+    parts
+      .join('')
+      .replace(/\b(?:https?:\/\/|mailto:)\S+/giu, '')
+      .match(/\p{L}[\p{L}\p{M}\u200c\u200d]*/gu) ?? [];
+  let rtl = 0;
+  let ltr = 0;
+  for (const word of words) {
+    if (/[\p{Script=Arabic}\p{Script=Hebrew}]/u.test(word)) rtl++;
+    else if (/\p{Script=Latin}/u.test(word)) ltr++;
+  }
+  if (!rtl && !ltr) return 'auto';
+  // Persian technical prose often starts with an English acronym or product name.
+  return rtl / (rtl + ltr) >= 0.4 ? 'rtl' : 'ltr';
 }

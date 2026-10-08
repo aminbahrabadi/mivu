@@ -234,8 +234,10 @@ TypeScript owns the toolbar, rendered article, current snapshot, search UI, and 
 2. Rust validates the extension and regular-file type, resolves the selected file, and opens its parent as a `cap-std` directory capability.
 3. A bounded read accepts valid UTF-8, strips an optional UTF-8 BOM, and publishes a revisioned snapshot. Failed opens retain the previous snapshot.
 4. A dedicated worker parses with raw HTML disabled; eight explicit highlight.js grammars color supported fenced code. It emits complete top-level blocks in small batches with frontend backpressure. DOMPurify sanitizes each batch before insertion; no worker HTML bypasses the sanitizer. Switching documents terminates obsolete workers.
-5. The renderer validates links, assigns unique heading IDs, sets `dir="auto"` per text block and table cell, and sets code to `dir="ltr"`. The reader inserts sanitized fragments between animation frames, keeping long-document parsing off the UI thread. A single enormous nested block can still require a larger insertion.
+5. The renderer validates links, assigns unique heading IDs, infers each prose block/list/table cell's direction, and sets code to `dir="ltr"`. The reader inserts sanitized fragments between animation frames, keeping long-document parsing off the UI thread. A single enormous nested block can still require a larger insertion.
 6. Images initially have inert references, never document-provided `src` URLs. A small worker pool requests bounded raster bytes from Rust and inserts validated data URLs. Stale responses are discarded.
+
+Desktop direction inference counts Arabic/Hebrew-script and Latin words in each block's own prose, excluding code, URLs and nested lists. A 40% RTL-word share selects RTL, accommodating Persian technical prose beginning with English acronyms; other recognized prose selects LTR. Blocks without recognized words retain native `dir="auto"`. Lists receive the same treatment so bullets and indentation follow their reading direction. Code and links remain isolated, and source text is never reordered or augmented with bidi control characters. This is a heuristic, not language identification; ambiguous fragments may still need further refinement. Firefox retains its submitted first-strong `dir="auto"` behavior. See [W3C's direction guidance](https://www.w3.org/International/questions/qa-html-dir) for the distinction.
 
 ### Watcher lifecycle
 
@@ -407,7 +409,7 @@ On a clean Zorin OS 18.1 installation:
 
 1. Install the verified `.deb` using apt; confirm Mivu appears in the menu with its icon. Launch from the menu and terminal.
 2. Use Open and drop `tests/fixtures/reading.md`; check tables, disabled tasks, code scrolling, local images, selection/copy, and an explicitly clicked external link.
-3. Open `tests/fixtures/persian.md` in both appearances. Check mixed punctuation, inline English, table cells, LTR code, and comfortable narrow/wide layouts.
+3. Open `tests/fixtures/persian.md` and `tests/fixtures/mixed-rtl.md` in both appearances. Check English-prefixed Persian paragraphs/bullets, English paragraphs containing Persian quotations, mixed punctuation, nested lists, table cells, LTR code, and comfortable narrow/wide layouts.
 4. Test all shortcuts, tab focus, keyboard scrolling, system theme changes, zoom reset, and screen-reader announcements/focus.
 5. Copy a fixture to a path with spaces and Persian characters and test `mivu 'path'`, Open With, and double-click after deliberately selecting Mivu as its handler. Confirm installation did not change existing defaults.
 6. Modify only the copied fixture externally; test normal writes, atomic replacement, deletion and restoration. Check refresh, scroll preservation, errors, and switching documents repeatedly.

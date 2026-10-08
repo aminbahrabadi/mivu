@@ -294,6 +294,52 @@ def main():
             driver.request('POST', f'/session/{driver.session}/window/rect', {'width': 560, 'height': 720})
             assert driver.execute('return document.documentElement.scrollWidth <= window.innerWidth')
             driver.screenshot('persian-narrow.png')
+            driver.execute('document.querySelector("[data-action=open]").click()')
+            choose_native_file(ROOT / 'tests/fixtures/mixed-rtl.md')
+            wait_for(lambda: document_ready(driver, 'راهنمای مستندات دو زبانه'))
+            for theme, width, zoom in (('light', 1000, 100), ('light', 560, 100), ('dark', 1000, 100), ('dark', 560, 100), ('dark', 560, 180)):
+                driver.execute('document.querySelector("#theme").value=arguments[0]; document.querySelector("#theme").dispatchEvent(new Event("change"))', theme)
+                driver.request('POST', f'/session/{driver.session}/window/rect', {'width': width, 'height': 1000})
+                driver.execute('document.querySelector("article").style.setProperty("--reader-size", arguments[0] + "px")', 17 * zoom / 100)
+                layout = driver.execute('''
+                    const article = document.querySelector('article');
+                    const direction = node => getComputedStyle(node).direction;
+                    const paragraphs = [...article.querySelectorAll(':scope > p')];
+                    const list = article.querySelector('ul');
+                    const nested = article.querySelector('ul ul');
+                    const firstText = paragraphs[0].firstChild;
+                    const range = document.createRange();
+                    range.setStart(firstText, 0); range.setEnd(firstText, 5);
+                    const event = range.getBoundingClientRect();
+                    range.setStart(firstText, 6); range.setEnd(firstText, 13);
+                    const service = range.getBoundingClientRect();
+                    return {
+                        paragraphs: paragraphs.map(direction),
+                        bullets: [...list.children].map(direction),
+                        list: direction(list),
+                        indent: list.getBoundingClientRect().right - list.firstElementChild.getBoundingClientRect().right,
+                        ordered: direction(article.querySelector('ol')),
+                        nestedParent: direction(nested.parentElement),
+                        nested: direction(nested),
+                        code: [...article.querySelectorAll('code,pre')].every(node => direction(node) === 'ltr'),
+                        englishPhrase: event.left < service.left,
+                        confined: document.documentElement.scrollWidth <= innerWidth && document.querySelector('#reader').scrollWidth <= document.querySelector('#reader').clientWidth,
+                        text: article.textContent
+                    };
+                ''')
+                assert layout['paragraphs'][:3] == ['rtl', 'rtl', 'ltr'], layout
+                assert all(d == 'rtl' for d in layout['paragraphs'][3:]), layout
+                assert all(d == 'rtl' for d in layout['bullets']), layout
+                assert layout['list'] == 'rtl' and layout['ordered'] == 'rtl' and layout['indent'] > 10, layout
+                assert layout['nestedParent'] == 'ltr' and layout['nested'] == 'rtl', layout
+                assert layout['code'] and layout['englishPhrase'] and layout['confined'], layout
+                driver.execute('document.querySelector("#reader").scrollTo({top:0,behavior:"instant"}); document.activeElement.blur()')
+                driver.screenshot(f'mixed-rtl-{theme}-{width}-{zoom}.png')
+            driver.execute('document.querySelector("article").style.removeProperty("--reader-size")')
+            driver.execute('document.querySelector("#find").click(); const input=document.querySelector("#search-input"); input.value="DLQ"; input.dispatchEvent(new Event("input"))')
+            assert driver.execute('return getComputedStyle(document.querySelector("article li")).direction') == 'rtl'
+            driver.execute('document.dispatchEvent(new KeyboardEvent("keydown", {key:"Escape"}))')
+            assert driver.execute('return document.querySelector("article").textContent') == layout['text']
             with tempfile.TemporaryDirectory(dir=ROOT / 'test-results') as temporary:
                 folder = Path(temporary)
                 path = folder / 'سلام with spaces.md'

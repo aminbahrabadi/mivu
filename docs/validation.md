@@ -14,7 +14,7 @@ This is evidence for release consideration, not a declaration of a fully validat
 | Command                                                   | Evidence                                                                                                     |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `pnpm install --frozen-lockfile`                          | Dependency installation and locked resolution succeeded                                                      |
-| `pnpm check`                                              | TypeScript, ESLint, 33 Vitest tests and production frontend build passed                                     |
+| `pnpm check`                                              | TypeScript, ESLint, 40 Vitest tests and production frontend build passed                                     |
 | `pnpm format:check`                                       | Prettier passed                                                                                              |
 | `pnpm check:rust`                                         | rustfmt, Clippy with warnings denied, 7 Rust tests passed                                                    |
 | `pnpm tauri build --debug --no-bundle --ci -- --locked`   | Debug desktop build passed; native interaction suite passed                                                  |
@@ -29,7 +29,15 @@ The actual native suite checks the GTK picker, GTK URI drag source, Unicode/spac
 
 The post-merge table fix is checked against `tests/fixtures/tables.md`, a representative eight-column table, mixed Persian/English cells, and a long unbroken identifier. The native WebKit regression fails against the original release binary because headers and short values wrap into multiple lines. With the fix it passes in light/dark themes at 1000 and 560 pixel window widths, plus 180% reading zoom: labels stay on one line, descriptions retain readable line lengths, cell padding prevents overlap, wide tables scroll locally, and the reader does not overflow. The full native interaction suite also passes. Captures are generated under `test-results/tables-after/`; the user's original private document was not opened or copied.
 
+## Desktop mixed-direction regression
+
+`tests/fixtures/mixed-rtl.md` reproduces English-prefixed Persian paragraphs and bullets, an English paragraph containing a Persian quotation, opposite-direction nested lists, inline code/URLs, a blockquote and table cells. The original preview binary fails the native regression: the first two paragraphs and four bullets are LTR, with no RTL list indentation. The updated debug binary passes the full suite in both themes at 1000/560 pixel widths, including 180% zoom, English phrase geometry, list indentation, LTR code, unchanged search text and containment. Maximum zoom exposed mixed-list markers overflowing their parent; assigning logical indentation to each item fixes it. Automatic direction remains a word-share heuristic; the original private document was not opened or copied.
+
+The rebuilt Zorin/Ubuntu 24.04 `.deb` also passed the complete extracted-package native suite and apt reinstall simulation. It is 3,691,380 bytes, requires glibc >= 2.39, and has SHA-256 `ed4e6afc992b1d603b935ad0ad79b4ac9054222d00d3baf1a4bd7ef955f0c180`. Its metadata and integration files were checked; this is local package evidence, not a host installation or an AppImage rebuild. The existing published preview assets remain unchanged.
+
 ## Performance methodology
+
+The recorded benchmarks below predate the table and mixed-direction fixes and have not been rerun for these changes.
 
 `pnpm bench` measures synchronous parse/highlight/sanitize/DOM-fragment creation in jsdom using representative GFM. Three minimum samples are not a statistical performance guarantee. These results must not be presented as native browser latency.
 

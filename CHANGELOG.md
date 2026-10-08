@@ -6,6 +6,7 @@ All notable user-facing changes will be recorded here. The format follows [Keep 
 
 ### Desktop — Fixed
 
+- Inferred reading direction from each block's prose instead of its first letter, keeping English-prefixed Persian paragraphs and bullets RTL while preserving independent English paragraphs, nested lists, code and search text.
 - Prevented table labels and identifiers from collapsing into single-letter columns. Headers stay on one line, descriptions wrap at word boundaries, and wide tables scroll within the reader.
 
 ### Firefox integration

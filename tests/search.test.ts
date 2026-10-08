@@ -25,6 +25,19 @@ describe('document search', () => {
     expect(highlightMatches(root, '').groups).toHaveLength(0);
     expect(root.textContent).toBe('سلام سلام [x] 1.0');
   });
+  it('preserves mixed-prose direction and text across formatted English matches', () => {
+    const root = document.createElement('article');
+    root.append(
+      renderMarkdown('Event **Service** بین برنامه و سرویس قرار دارد.'),
+    );
+    const text = root.textContent;
+    expect(highlightMatches(root, 'Event Service').groups).toHaveLength(1);
+    expect(root.querySelector('p')?.getAttribute('dir')).toBe('rtl');
+    clearMatches(root);
+    expect(root.textContent).toBe(text);
+    expect(root.querySelector('p')?.getAttribute('dir')).toBe('rtl');
+    expect(root.querySelector('strong')?.textContent).toBe('Service');
+  });
   it('does not join separate blocks and reports the highlighting limit honestly', () => {
     const root = document.createElement('article');
     root.innerHTML = '<p>hello</p><p>world</p>';

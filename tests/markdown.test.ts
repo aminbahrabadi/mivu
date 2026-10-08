@@ -87,12 +87,61 @@ describe('Markdown reading pipeline', () => {
     const html = renderMarkdown(
       '# راهنما\n\nسلام با `pnpm build` کار کنید.\n\nEnglish paragraph.\n\n| فارسی | English |\n| - | - |\n| متن | text |\n\n```bash\npnpm build\n```',
     );
-    expect(html.querySelectorAll('p[dir=auto]')).toHaveLength(2);
-    expect(html.querySelector('td')?.getAttribute('dir')).toBe('auto');
+    expect(html.querySelectorAll('p[dir=rtl]')).toHaveLength(1);
+    expect(html.querySelectorAll('p[dir=ltr]')).toHaveLength(1);
+    expect(html.querySelector('td')?.getAttribute('dir')).toBe('rtl');
     expect(html.querySelector('pre')?.getAttribute('dir')).toBe('ltr');
     expect(html.querySelector('code')?.getAttribute('dir')).toBe('ltr');
     expect(html.querySelector('h1')?.id).toBe('راهنما');
   });
+  it('keeps English-prefixed Persian prose and list items right-to-left', () => {
+    const html = renderMarkdown(
+      'Event Service بین برنامه و سرویس قرار دارد.\n\n- DLQ نداریم.\n- malformed eventها skip و commit می‌شوند.\n\n1. HTTP پاسخ مناسب را برمی‌گرداند.',
+    );
+    expect(html.querySelector('p')?.getAttribute('dir')).toBe('rtl');
+    expect(html.querySelector('ul')?.getAttribute('dir')).toBe('rtl');
+    expect(html.querySelector('ol')?.getAttribute('dir')).toBe('rtl');
+    for (const item of html.querySelectorAll('li'))
+      expect(item.getAttribute('dir')).toBe('rtl');
+  });
+  it('keeps English prose with a short Persian quotation left-to-right', () => {
+    const html = renderMarkdown(
+      'This English paragraph includes «فقط بخوانید» and then continues in English.\n\nسلام is the Persian word for hello in this English sentence.',
+    );
+    for (const paragraph of html.querySelectorAll('p'))
+      expect(paragraph.getAttribute('dir')).toBe('ltr');
+  });
+  it('does not let code, URLs or nested lists choose the surrounding prose direction', () => {
+    const html = renderMarkdown(
+      '`one two three four five six seven eight` توضیح فارسی است.\n\nhttps://example.org/one/two/three/four/five/six راهنمای فارسی است.\n\n- English parent.\n  - API برای خواندن در دسترس است.\n  - توضیح کامل به فارسی نوشته شده است.',
+    );
+    for (const paragraph of html.querySelectorAll('p'))
+      expect(paragraph.getAttribute('dir')).toBe('rtl');
+    expect(html.querySelector('ul')?.getAttribute('dir')).toBe('ltr');
+    expect(html.querySelector('li')?.getAttribute('dir')).toBe('ltr');
+    expect(html.querySelector('ul ul')?.getAttribute('dir')).toBe('rtl');
+    expect(html.querySelector('code')?.getAttribute('dir')).toBe('ltr');
+  });
+  it('preserves mixed-script text and leaves digit-only blocks to the browser', () => {
+    const source = 'API برای خواندن **providerهای** مختلف در دسترس است.';
+    const html = renderMarkdown(source + '\n\n2026 ۰٫۱٫۰');
+    expect(html.querySelector('p')?.getAttribute('dir')).toBe('rtl');
+    expect(html.querySelector('p')?.textContent).toBe(
+      'API برای خواندن providerهای مختلف در دسترس است.',
+    );
+    expect(html.querySelectorAll('p')[1]?.getAttribute('dir')).toBe('auto');
+  });
+  it.each([
+    ['HTTP يرسل الرسائل إلى الخادم ويستقبل الردود.', 'rtl'],
+    ['English prose، with a comma and digits ۱۲۳.', 'ltr'],
+  ])(
+    'handles script letters without treating punctuation as prose: %s',
+    (source, direction) => {
+      expect(
+        renderMarkdown(source).querySelector('p')?.getAttribute('dir'),
+      ).toBe(direction);
+    },
+  );
   it('creates stable unique heading anchors', () => {
     expect(
       Array.from(
