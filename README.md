@@ -2,11 +2,42 @@
 
 **Just read Markdown.**
 
-A minimal, beautiful, read-only Markdown reader for Linux. Mivu uses Tauri 2, Rust, and vanilla TypeScript to bring local Markdown into a calm desktop reading window. Open source under the MIT license, with no accounts, telemetry, or network-loaded assets.
+A minimal, beautiful, read-only Markdown reader, available as a Linux-first desktop application and a permission-free Firefox extension. Both keep documents local, with no accounts, telemetry, uploads or network-loaded assets. Open source under the MIT license.
 
-**v0.1.0 is a release candidate under validation, not a published stable release.** Native WebKit automation runs on Zorin OS 18.1. Human desktop acceptance and older-distribution compatibility remain release gates; see [validation](#validation-and-manual-desktop-checklist).
+**Desktop v0.1.0 is a release candidate under validation, not a published stable release.** Native WebKit automation runs on Zorin OS 18.1. Human desktop acceptance and older-distribution compatibility remain release gates; see [validation](#validation-and-manual-desktop-checklist).
 
-## Features
+## Available applications
+
+- **Mivu Desktop:** Tauri 2, Rust and vanilla TypeScript. Linux-first, with native
+  file handling, constrained relative resources and external-change refresh.
+- **Mivu for Firefox:** Manifest V3, standalone JavaScript, browser-selected files,
+  Marked and locally bundled highlight.js. **Firefox 0.1.0 is submitted to Mozilla
+  and awaiting review** according to the supplied submission record; no public AMO
+  listing is verified yet. It works without Desktop installed and declares no API
+  or host permissions. See [Firefox setup, architecture and release evidence](firefox/README.md).
+
+Versions and release gates are independent. Shared product/design standards are
+conceptual; these applications have separate runtime implementations.
+
+| Capability                                     | Desktop candidate                         | Firefox submitted 0.1.0                           |
+| ---------------------------------------------- | ----------------------------------------- | ------------------------------------------------- |
+| Explicit Markdown selection and file drop      | Native picker/drop                        | Browser file input/drop                           |
+| GFM and inert task lists                       | Implemented                               | Implemented                                       |
+| Code highlighting                              | 8 colored language grammars               | 34 tokenizing grammars; current CSS is monochrome |
+| Light/dark/system and Persian/Arabic blocks    | Implemented; LTR code                     | Implemented; LTR code                             |
+| Search and reading zoom                        | Across inline formatting; 2,000-match cap | Per text node; 500-match cap                      |
+| Local raster images                            | Constrained directory capability          | Explicitly select images; basename matching       |
+| Local Markdown/heading links                   | Validated open / anchor scroll            | Inactive text; reopen files explicitly            |
+| External HTTP(S)/mail links                    | System handler after click                | Browser/mail navigation after click               |
+| Automatic external-file refresh                | Implemented                               | Unavailable under this file-selection model       |
+| CLI, Linux Open With and MIME registration     | Implemented; installed acceptance pending | Outside extension responsibilities                |
+| Remote image loads, editing, accounts, uploads | Excluded                                  | Excluded                                          |
+
+Capabilities were inspected and automated checks were run; human/platform
+acceptance and historical dependency provenance limits remain explicit in each
+application's validation report.
+
+## Desktop features
 
 Implemented:
 
@@ -34,7 +65,7 @@ Actual Mivu screenshots from the Linux WebKit window on an isolated X11 display 
 
 Use artifacts from an intentionally tagged, verified release when available. No stable release has been published as part of this implementation. Build locally with the commands below if you want to evaluate the candidate.
 
-### Debian / Ubuntu / Zorin
+### Desktop: Debian / Ubuntu / Zorin
 
 From the directory containing the package:
 
@@ -55,7 +86,7 @@ sudo apt remove mivu
 
 This removes the application, not your Markdown files. Theme preferences and WebKit caches under your XDG application directories can remain.
 
-### AppImage
+### Desktop: AppImage
 
 ```sh
 chmod +x Mivu_0.1.0_amd64.AppImage
@@ -70,7 +101,22 @@ APPIMAGE_EXTRACT_AND_RUN=1 ./Mivu_0.1.0_amd64.AppImage README.md
 
 On Ubuntu 24.04, `libfuse2t64` enables normal FUSE execution. Do not remove your system's FUSE 3 package. Delete the AppImage to uninstall it.
 
-## Usage
+### Firefox
+
+Until Mozilla approves a public listing, use a temporary development installation:
+open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**,
+and select `firefox/app/manifest.json` or the locally built extension ZIP. Activate
+Mivu through its extension action and select/drop Markdown. Temporary installation
+ends when Firefox restarts. No desktop package or additional extension permission
+is needed. Browser minimum is declared as 128.0; actual automation ran on 155.0.1.
+Firefox 128/ESR/Android remain untested. The minimum-version data-declaration
+warnings and installation details are in [firefox/README.md](firefox/README.md).
+
+When approved, install from the maintainer's verified Mozilla Add-ons listing;
+no approved listing/download URL is claimed here. Remove the extension through
+Firefox's Add-ons Manager. Source documents remain untouched.
+
+## Desktop usage
 
 Launch **Mivu** from the application menu, choose **Open**, or drop one Markdown document into the window. Opening another document replaces the current view; Mivu does not save or modify it. Empty files and failed opens have explicit states; a failed open preserves the previous document.
 
@@ -98,7 +144,7 @@ The application handles Command in place of Ctrl for its own shortcuts on future
 
 Relative links resolve from the current document directory inside the originally selected document's folder. Clicking a local Markdown link opens it through Rust validation. Heading links scroll inside the view. HTTP(S) and mail links open the system browser/mail application only after a user click. Remote images show a blocked-content placeholder and never fetch automatically.
 
-## Development setup
+## Desktop development setup
 
 On Ubuntu 24.04 / Zorin OS 18.1:
 
@@ -113,8 +159,8 @@ Install Rust stable with rustup and Node.js 24.12 or later (Node 24 LTS recommen
 npm install --global pnpm@12.10.1
 git clone https://github.com/aminbahrabadi/mivu.git
 cd mivu
-# Until the candidate PR is merged:
-git switch feat/linux-v0.1
+# Until the implementation PRs are merged:
+git switch feat/firefox-extension-integration
 pnpm install --frozen-lockfile
 pnpm tauri dev
 ```
@@ -131,7 +177,34 @@ pnpm test:native
 
 The native harness needs Linux X11 and uses Xvfb, the system WebKitWebDriver, and libxdo. No browser download or Node browser framework is required. For real screenshots, pass `--screenshots docs/screenshots` explicitly; normal tests write only ignored `test-results/` artifacts.
 
-## Architecture
+## Architecture overview
+
+```mermaid
+flowchart TB
+  Standards[Shared product standards: read-only, offline privacy, calm typography, RTL]
+  Standards -.-> Desktop
+  Standards -.-> Firefox
+  subgraph Desktop[Desktop runtime]
+    Native[Explicit native selection: Rust directory capability] --> MD[Worker: markdown-it and highlight.js]
+    MD --> Safe[DOMPurify and native URL/resource validation]
+    Safe --> Window[Tauri WebKit reader]
+    Watch[Native directory watcher / Linux CLI and MIME] --> Native
+  end
+  subgraph Firefox[Firefox runtime]
+    Action[Permission-free action: own reader tab] --> File[Explicit browser File / selected raster blobs]
+    File --> Marked[Marked and bundled highlight.js]
+    Marked --> Allowlist[Inert DOM parsing and attribute/element allowlist]
+    Allowlist --> Page[Extension reader, restrictive CSP]
+  end
+  Window -->|user-clicked link| System[System browser/mail]
+  Page -->|user-clicked link| Browser[Browser/mail navigation]
+```
+
+The dotted connections represent shared standards, not shared code. Native
+filesystem capabilities and WebExtensions `File` objects are different trust
+boundaries. Neither renderer has arbitrary filesystem or visited-page access.
+
+## Desktop architecture
 
 ```mermaid
 flowchart LR
@@ -188,6 +261,32 @@ Linux packaging owns the freedesktop launcher, MIME XML, icons, and database-upd
 
 Document validation, rendering, themes, and search are portable. CLI/path processing uses native path types. Windows/macOS icon assets exist, and platform libraries are isolated in Rust/Tauri and Linux bundle configuration. Windows/macOS builds, native associations, signed installers, and their lifecycle differences are future validation work; no cross-platform release is claimed. Non-UTF-8 filenames are not a supported v0.1 interface, although Unicode filenames are supported.
 
+## Firefox architecture
+
+Firefox MV3 supports `background.scripts`. The tiny background listens to an
+action click and opens its own reader tab using `browser.tabs.create`; creating
+that tab needs no `tabs` permission. There are no content scripts or host grants.
+The reader accepts only user-selected/dropped browser `File` objects, validates
+Markdown extension/8 MiB/UTF-8, and retains one document in page-local state.
+
+Marked suppresses raw HTML. Code is escaped or highlighted, links are filtered,
+and all images become inert placeholders. A `DOMParser`/tag-and-attribute
+allowlist creates a sanitized fragment imported directly into the article;
+no HTML assignment or serialize/reparse step is used. Text blocks/cells get
+`dir="auto"`, code stays LTR. Search, zoom and theme are reader-page concerns;
+only theme is persisted locally. The CSP denies network connections, remote
+scripts, objects and forms.
+
+**Add images** authorizes individual PNG/JPEG/GIF/WebP files, validates type,
+signature and 12 MiB per-file/30-file limits, and creates revocable blobs matched
+by basename. There is no directory scope, file watching or automatic local-link
+opening. Remote references remain placeholders. The pending-image race, decoded
+image/large-document resource limits and incomplete highlight.js upstream build
+provenance are documented in the [implementation review](firefox/docs/audit.md).
+The exact submitted runtime is hash-guarded; future runtime corrections require
+a new Firefox version. Detailed modules, reviewer sources, permission model and
+manual checks live in [firefox/README.md](firefox/README.md).
+
 ## Repository structure
 
 ```text
@@ -205,7 +304,13 @@ mivu/
 │   ├── tauri.conf.json             # application, window and CSP configuration
 │   ├── tauri.linux.conf.json        # Linux packaging
 │   └── mivu.desktop, mivu-mime.xml  # desktop and MIME integration
-├── tests/                          # Vitest tests, benchmark and realistic fixtures
+├── firefox/
+│   ├── app/                        # unchanged Firefox 0.1.0 reader, MV3 manifest and vendor assets
+│   ├── tools/, tests/              # offline ZIP build, Firefox smoke and regressions
+│   ├── releases/                   # submitted artifact hash and complete inventory
+│   ├── third-party/, docs/         # licenses, readable vendor view, findings and screenshots
+│   └── README.md                   # detailed extension development and reviewer instructions
+├── tests/                          # desktop Vitest tests, benchmark and realistic fixtures
 ├── scripts/                        # native smoke, benchmarks and package checks
 ├── assets/mivu.svg                 # original icon source
 ├── docs/screenshots/               # actual application captures
@@ -224,7 +329,7 @@ mivu/
 - **Read-only capabilities:** explicitly selected documents authorize a bounded directory scope; the renderer cannot request arbitrary paths. This makes security properties inspectable and testable.
 - **Minimal dependencies:** no UI framework, persistence service, browser test framework, or extension system. `cap-std` is a deliberate addition for race-resistant filesystem boundaries; `notify` handles native watcher differences.
 
-## Testing and benchmarks
+## Desktop testing and benchmarks
 
 ```sh
 pnpm check             # strict TypeScript, ESLint, Vitest, production frontend
@@ -243,7 +348,36 @@ Reproduce a failure with the same command and OS/WebKit versions. Native logs, s
 
 Benchmarks generate representative GFM from `tests/fixtures/reading.md`. Native timings include second-instance IPC, parsing, sanitization, and DOM insertion, with three samples per size. Startup measures process-cold launches with warm OS caches, including WebDriver negotiation; it is not a disk-cold startup claim. Process-tree RSS double-counts shared pages. On the recorded Zorin/Xvfb baseline, median complete opening was about 115 ms for 8 KiB, 204 ms for 64 KiB, 1.08 s for 512 KiB, and 5.86 s for 2 MiB of dense GFM. The 2 MiB case used about 1.20 GiB of summed process-tree RSS, which double-counts shared pages; large DOMs remain a performance limit. Startup, first-content, scheduling gaps, memory and watcher measurements with full conditions are in [docs/validation.md](docs/validation.md). Microbenchmarks under jsdom are not desktop timing predictions.
 
-## Building and releasing
+## Firefox development, testing and packaging
+
+Builds use Python's standard library only and work offline. The full reader suite
+reuses existing root jsdom/Prettier development dependencies; no extension npm
+runtime dependency, bundler or monorepo manager is added.
+
+```sh
+python3 firefox/tools/build_amo.py
+python3 -m unittest discover -s firefox/tests -p 'test_*.py' -v
+node --test firefox/tests/safety.test.mjs  # no dependency installation
+pnpm install --frozen-lockfile
+node --test firefox/tests/*.test.mjs
+npm exec --yes --package=web-ext@10.7.0 -- web-ext lint --source-dir firefox/app
+python3 firefox/tools/browser_smoke.py   # installed Firefox + geckodriver 0.37.1
+```
+
+AMO/source ZIPs are written to ignored `firefox/dist/`. Submitted v0.1.0 runtime
+file-content parity is verified on every build; fixed metadata makes output
+ordering/timestamps deterministic. A source archive includes licenses, tests and
+reviewer materials. Full regeneration of the custom highlighter from upstream
+is unproven; do not conflate runtime reconstruction with that remaining gap.
+
+The path-filtered Firefox workflow runs syntax, unit/security/policy/package
+checks, Mozilla lint and isolated Firefox smoke tests, and uploads ZIPs/logs.
+There is no AMO signing or publishing. Firefox versions use the manifest and
+intentional `firefox-vX.Y.Z` tags; Desktop metadata/tags remain independent.
+Runtime changes must bump Firefox beyond submitted 0.1.0 and pass validation
+before a separate maintainer submission decision. See [Firefox release workflow](firefox/README.md#build-amo-packaging-and-historical-reproduction).
+
+## Desktop building and releasing
 
 ```sh
 pnpm build                             # frontend only
@@ -282,6 +416,8 @@ On a clean Zorin OS 18.1 installation:
 
 ## Roadmap
 
+### Desktop
+
 | Phase | Implementation                     | Validation status                                                                                        |
 | ----- | ---------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | 0     | Project initialization and tooling | Implemented; builds and initial Linux development launch checked                                         |
@@ -295,13 +431,27 @@ On a clean Zorin OS 18.1 installation:
 
 Proposals, not commitments: v0.2 Mermaid and mathematical notation; v0.3 optional document outline; v0.4 multiple document tabs; future Windows/macOS builds. These need scope and security review before implementation.
 
+### Firefox
+
+Integration phases (inspection/parity, source import, code review/regressions,
+deterministic build/CI, combined documentation, final verification) are recorded
+in [firefox/docs/integration.md](firefox/docs/integration.md). The submitted 0.1.0
+runtime is preserved; AMO review is pending. Browser automation passed on 155.0.1;
+minimum-version/ESR/Android and human acceptance remain unverified.
+
+Next-version priorities: image-selection generations/aggregate budgets, complete
+vendor provenance and runtime license text, existing highlight-token colors,
+small-screen image selection and search cap reporting. Anchors are a proposal;
+no broader permissions or desktop dependency is planned. These are follow-up
+proposals, not changes to the historical release or guaranteed release dates.
+
 ## Contributing
 
-Small improvements to reading quality, security, accessibility, and Linux reliability are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tests, issue/PR expectations and review guidelines, and [AGENTS.md](AGENTS.md) for repository instructions.
+Small improvements to reading quality, security, accessibility, Linux reliability and Firefox behavior are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tests, issue/PR expectations and review guidelines, and [AGENTS.md](AGENTS.md) for repository instructions.
 
 ## Security
 
-Please report vulnerabilities through [SECURITY.md](SECURITY.md). Never attach private documents to a public issue. The security model above explains the selected-folder boundary, offline behavior, native permissions, and limits; it does not promise complete isolation from WebKit or operating-system vulnerabilities.
+Please report vulnerabilities through [SECURITY.md](SECURITY.md). Never attach private documents to a public issue. Desktop uses a selected-folder capability; Firefox uses explicit browser File selections and zero API/host permissions. Both disable active Markdown and automatic remote loads. Resource/decoder limits and historical dependency gaps are documented; neither promises complete isolation from browser, WebKit or operating-system vulnerabilities.
 
 ## License
 

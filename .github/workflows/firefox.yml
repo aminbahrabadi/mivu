@@ -1,0 +1,86 @@
+name: Firefox validation and packages
+
+on:
+  pull_request:
+    paths:
+      - 'firefox/**'
+      - '.github/workflows/firefox.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  push:
+    branches: [main, feat/linux-v0.1, feat/firefox-extension-integration]
+    tags: ['firefox-v*']
+    paths:
+      - 'firefox/**'
+      - '.github/workflows/firefox.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firefox-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  firefox:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Syntax and regression tests
+        run: |
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find firefox/app firefox/tests -type f \( -name '*.js' -o -name '*.mjs' \) -print0)
+          node --test firefox/tests/*.test.mjs
+          python3 -m unittest discover -s firefox/tests -p 'test_*.py' -v
+      - name: Offline packaging and submitted content verification
+        run: |
+          python3 firefox/tools/build_amo.py
+          sha256sum firefox/dist/*.zip
+      - name: Verify intentional Firefox version tag
+        if: startsWith(github.ref, 'refs/tags/firefox-v')
+        env:
+          FIREFOX_TAG: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          version = json.load(open('firefox/app/manifest.json'))['version']
+          if os.environ['FIREFOX_TAG'] != 'firefox-v' + version:
+              raise SystemExit('Firefox tag and manifest version differ')
+          PY
+      - name: Mozilla lint (known compatibility warnings remain visible)
+        run: |
+          mkdir -p test-results/firefox
+          npm exec --yes --package=web-ext@10.7.0 -- web-ext lint --source-dir firefox/app --output json > test-results/firefox/web-ext-lint.json
+          cat test-results/firefox/web-ext-lint.json
+      - uses: browser-actions/setup-firefox@0bc507ddf224827e3b1af68e014d5e42ab93e795 # v1.7.2
+        id: browser
+        with:
+          firefox-version: '155.0.1'
+      - uses: browser-actions/setup-geckodriver@fac5b0424c584257f32cf12c5eb4ba86014c34f8 # pinned latest commit
+        with:
+          geckodriver-version: '0.37.1'
+      - name: Packaged Firefox integration smoke test
+        env:
+          FIREFOX: ${{ steps.browser.outputs.firefox-path }}
+        run: python3 firefox/tools/browser_smoke.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: mivu-firefox-validation
+          if-no-files-found: error
+          path: |
+            firefox/dist/*.zip
+            test-results/firefox/

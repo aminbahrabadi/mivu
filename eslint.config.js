@@ -3,7 +3,13 @@ import ts from 'typescript-eslint';
 
 export default ts.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'src-tauri/**', 'test-results/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'src-tauri/**',
+      'test-results/**',
+      'firefox/**', // Firefox has separate syntax, runtime and package checks.
+    ],
   },
   js.configs.recommended,
   ...ts.configs.recommended,

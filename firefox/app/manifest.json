@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Mivu — Markdown Reader",
+  "short_name": "Mivu",
+  "version": "0.1.0",
+  "description": "A minimal, beautiful, private Markdown reader. No permissions required.",
+  "icons": {
+    "48": "icons/mivu.svg",
+    "96": "icons/mivu.svg"
+  },
+  "action": {
+    "default_title": "Open Mivu",
+    "default_icon": "icons/mivu.svg"
+  },
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "permissions": [],
+  "host_permissions": [],
+  "content_security_policy": {
+    "extension_pages": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "mivu@aminbahrabadi.github.io",
+      "strict_min_version": "128.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    }
+  }
+}

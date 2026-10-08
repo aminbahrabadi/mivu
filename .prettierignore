@@ -9,3 +9,6 @@ playwright-report
 *.png
 *.ico
 *.icns
+# Submitted Firefox runtime stays byte-identical; it has its own validation.
+firefox/app
+firefox/third-party
