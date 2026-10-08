@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "reader"
+description = "Select a document with the native picker and obtain the active snapshot."
+commands.allow = ["pick_document", "current_document"]

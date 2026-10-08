@@ -1,12 +1,72 @@
 :root {
   font-family: system-ui, sans-serif;
-  color-scheme: light dark;
+  color: #293833;
+  background: #faf9f6;
+}
+* {
+  box-sizing: border-box;
 }
 body {
   margin: 0;
 }
-main {
-  max-width: 48rem;
-  margin: 6rem auto;
-  padding: 2rem;
+button {
+  font: inherit;
+  border: 1px solid #cdd8d1;
+  background: #fff;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  color: inherit;
+}
+button:focus-visible,
+main:focus-visible {
+  outline: 2px solid #175e55;
+  outline-offset: 3px;
+}
+.toolbar {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0 1.5rem;
+  border-bottom: 1px solid #e4e6df;
+}
+.brand {
+  font-weight: 750;
+}
+#document-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #5c6b65;
+}
+#reader {
+  height: calc(100vh - 64px);
+  overflow: auto;
+  padding: 3rem max(2rem, calc((100vw - 740px) / 2));
+  line-height: 1.75;
+}
+.empty {
+  text-align: center;
+  margin-top: 16vh;
+}
+.empty h1 {
+  font-size: 2rem;
+  letter-spacing: -0.04em;
+  font-weight: 600;
+}
+.hint {
+  font-size: 0.8rem;
+  color: #5c6b65;
+}
+#error {
+  padding: 0.75rem 1.5rem;
+  background: #ffe9e4;
+  color: #832d21;
+}
+pre {
+  overflow-x: auto;
+  padding: 1rem;
+  background: #edf0eb;
 }

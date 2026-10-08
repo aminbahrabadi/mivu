@@ -6,6 +6,18 @@ A minimal, beautiful, read-only Markdown reader. MIT licensed, Linux-first, buil
 
 ## Development
 
+## Implemented features
+
+- Native open dialog and drag-and-drop, UTF-8 Markdown, friendly errors, Unicode paths.
+- Read-only rendering, bounded documents (8 MiB), and Ctrl+O.
+- No editing, accounts, telemetry, cloud, plugins, terminals, or remote content loading.
+
+## Architecture
+
+Rust owns explicitly selected documents. The main window can request the native picker or the current snapshot; it cannot read arbitrary paths. TypeScript receives a revisioned snapshot and renders through markdown-it with raw HTML disabled and DOMPurify sanitization. Failed opens leave the previous document intact. Source files are opened for reading only.
+
+## Development setup
+
 Use Node 24, pnpm 12, and Rust stable (1.88 or later). Linux needs GTK 3, WebKitGTK 4.1, librsvg, libxdo, OpenSSL, and build tools. See [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
 
 ```sh
@@ -23,7 +35,7 @@ The durable execution plan is [docs/implementation.md](docs/implementation.md). 
 | Phase | Scope                         | Status    |
 | ----- | ----------------------------- | --------- |
 | 0     | Tooling, shell, CI            | Validated |
-| 1     | Native file opening           | Pending   |
+| 1     | Native file opening           | Validated |
 | 2     | Secure Markdown rendering     | Pending   |
 | 3     | Reading experience and RTL    | Pending   |
 | 4     | Linux integration and refresh | Pending   |

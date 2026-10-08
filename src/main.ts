@@ -1,4 +1,9 @@
 import './styles/global.css';
+import { startApp } from './app';
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML =
-  '<main><h1>Mivu</h1><p>Just read Markdown.</p></main>';
+void startApp(document.querySelector<HTMLDivElement>('#app')!).catch(
+  (error) => {
+    document.querySelector<HTMLDivElement>('#app')!.textContent =
+      `Mivu could not start: ${String(error)}`;
+  },
+);

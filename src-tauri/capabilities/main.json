@@ -3,5 +3,9 @@
   "identifier": "main",
   "description": "Only the main reader window can listen for document updates.",
   "windows": ["main"],
-  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "reader"
+  ]
 }
