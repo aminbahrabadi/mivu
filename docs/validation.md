@@ -72,13 +72,14 @@ The Ubuntu 22.04 Actions run at `83da12d` passed frozen installation, frontend/R
 
 A separate fresh local clone passed frozen dependency installation and frontend checks. The native CI job builds from a fresh checkout. This does not establish human installation acceptance or a fully offline dependency-installation workflow.
 
-## Remaining release gates
+## Remaining manual acceptance
 
 - Clean-system apt installation/removal, actual file-manager Open With/default selection/double-click, and verifying unchanged host defaults.
 - Human long-session reading, mixed-language punctuation review, screen-reader behavior and keyboard-only acceptance.
 - Actual fractional-scale monitors and complete Wayland/Xorg foreground/drag behavior. Automated startup and 2× layout checks alone do not establish these.
 - Ubuntu 22.04/Debian 12 installation using an older-host CI artifact; Windows/macOS are future targets.
-- Public tagged release publication. No tag or public release is created during implementation.
+
+The maintainer explicitly authorized publishing desktop v0.1.0 before these manual checks, with acceptance to follow installation. The [tagged release](https://github.com/aminbahrabadi/mivu/releases/tag/v0.1.0) uses independently built Ubuntu 22.04 CI artifacts after automated checks and checksum verification. Release asset checksums, rather than the local-build hashes above, identify those downloads. Publication does not establish completion of the outstanding checks or support for untested distributions.
 
 ## Known limits
 
