@@ -192,10 +192,17 @@ export async function startApp(root: HTMLElement): Promise<() => void> {
       display(event.payload);
     },
   );
-  const unlistenError = await listen<string>('document-error', (event) => {
-    showError(event.payload);
-  });
+  const unlistenError = await listen<{ id: number; message: string }>(
+    'document-error',
+    (event) => {
+      if (!current || event.payload.id >= current.id)
+        showError(event.payload.message);
+    },
+  );
   const initial = await invoke<InitialState>('current_document');
+  const unlistenDrag = await listen<boolean>('drag-active', (event) => {
+    root.classList.toggle('drag-over', event.payload);
+  });
   if (initial.document) display(initial.document);
   if (initial.error) showError(initial.error);
   return () => {
@@ -203,5 +210,6 @@ export async function startApp(root: HTMLElement): Promise<() => void> {
     disposeTheme();
     unlistenDocument();
     unlistenError();
+    unlistenDrag();
   };
 }

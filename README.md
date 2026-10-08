@@ -10,6 +10,7 @@ A minimal, beautiful, read-only Markdown reader. MIT licensed, Linux-first, buil
 - Read-only rendering, bounded documents (8 MiB), and Ctrl+O.
 - GFM tables, task lists, nested lists, autolinks, syntax highlighting, local Markdown links and PNG/JPEG/GIF/WebP images.
 - System/light/dark themes, per-block Persian/English direction, search across formatted text, selection/copy, keyboard reading zoom.
+- Startup and single-instance command-line opening, containing-directory watching with debounced automatic refresh and scroll preservation.
 - No editing, accounts, telemetry, cloud, plugins, terminals, or remote content loading.
 
 ## Screenshots
@@ -41,16 +42,16 @@ pnpm package:deb
 
 The durable execution plan is [docs/implementation.md](docs/implementation.md). No unfinished feature is advertised as available.
 
-| Phase | Scope                         | Status    |
-| ----- | ----------------------------- | --------- |
-| 0     | Tooling, shell, CI            | Validated |
-| 1     | Native file opening           | Validated |
-| 2     | Secure Markdown rendering     | Validated |
-| 3     | Reading experience and RTL    | Validated |
-| 4     | Linux integration and refresh | Pending   |
-| 5     | Security and robustness       | Pending   |
-| 6     | Tests and performance         | Pending   |
-| 7     | Packaging and release CI      | Pending   |
+| Phase | Scope                         | Status                                                            |
+| ----- | ----------------------------- | ----------------------------------------------------------------- |
+| 0     | Tooling, shell, CI            | Validated                                                         |
+| 1     | Native file opening           | Validated                                                         |
+| 2     | Secure Markdown rendering     | Validated                                                         |
+| 3     | Reading experience and RTL    | Validated                                                         |
+| 4     | Linux integration and refresh | Native and package smoke validated; manual desktop checks pending |
+| 5     | Security and robustness       | Pending                                                           |
+| 6     | Tests and performance         | Pending                                                           |
+| 7     | Packaging and release CI      | Pending                                                           |
 
 ## License
 

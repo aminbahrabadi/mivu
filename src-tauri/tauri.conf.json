@@ -30,7 +30,7 @@
   "bundle": {
     "active": true,
     "targets": ["deb", "appimage"],
-    "category": "Office",
+    "category": "Productivity",
     "shortDescription": "Just read Markdown.",
     "longDescription": "A minimal, beautiful, read-only Markdown reader. Linux-first and fully offline.",
     "homepage": "https://github.com/aminbahrabadi/mivu",
@@ -41,6 +41,15 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["md", "markdown"],
+        "mimeType": "text/markdown",
+        "name": "Markdown document",
+        "role": "Viewer"
+      }
     ]
-  }
+  },
+  "mainBinaryName": "mivu"
 }

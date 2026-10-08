@@ -39,3 +39,7 @@ Dependencies installed, lockfiles committed, frontend build/typecheck/lint and R
 ### Phase 3
 
 28 frontend tests passed with typecheck/lint/build. Native WebKit automation passed the actual picker, local raster decoding, local Markdown navigation, theme switching, search, zoom, Persian paragraph direction, LTR code and 560px window resizing. Original application screenshots captured and visually inspected in light/dark and mixed-language states. tests/native_smoke.py uses Python standard library with platform WebKitWebDriver and libxdo; no browser framework is needed for native coverage. Human long-session reading and accessibility assistive technology still need manual checks.
+
+### Phase 4
+
+5 Rust tests and 28 frontend tests passed, including watcher atomic replacement, debounce, neighbor filtering and cleanup. Native WebKit test verified startup and second-instance forwarding, Unicode/spaced paths, refresh/scroll preservation, deletion and recovery; observed refresh 210.1 ms on one sample (not a statistical benchmark). Debug .deb built, inspected and extracted into an isolated XDG environment. MIME database identifies .md as text/markdown and gio launches the package desktop entry without modifying host defaults. Wayland host launch previously succeeded; native automation uses X11. Human file-manager default-handler and high-DPI checks remain pending.

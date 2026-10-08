@@ -1,4 +1,5 @@
 use crate::documents::{Document, OpenDocument};
+use crate::file_watcher::{DocumentWatcher, WatchNotice};
 use std::{path::Path, sync::Mutex};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_dialog::DialogExt;
@@ -9,6 +10,8 @@ pub struct Session {
     pub error: Option<String>,
     pub revision: u64,
     pub image_bytes: usize,
+    pub watcher: Option<DocumentWatcher>,
+    pub watch_generation: u64,
 }
 
 pub type ReaderState = Mutex<Session>;
@@ -23,16 +26,91 @@ pub fn open_selected(app: &AppHandle, path: &Path) -> Result<Document, String> {
 }
 
 fn publish(app: &AppHandle, session: &mut Session, next: OpenDocument) -> Document {
+    session.watcher = None;
+    session.watch_generation += 1;
+    let generation = session.watch_generation;
+    let handle = app.clone();
+    let watcher = DocumentWatcher::new(&next.folder.join(&next.relative), move |notice| {
+        refresh_from_watch(&handle, generation, notice);
+    });
     let snapshot = next.snapshot.clone();
     session.revision = snapshot.id;
     session.current = Some(next);
     session.error = None;
     session.image_bytes = 0;
+    let warning = match watcher {
+        Ok(watcher) => {
+            session.watcher = Some(watcher);
+            None
+        }
+        Err(error) => {
+            session.error = Some(error.clone());
+            Some(error)
+        }
+    };
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.set_title(&format!("{} — Mivu", snapshot.name));
     }
     let _ = app.emit("document-changed", &snapshot);
+    if let Some(message) = warning {
+        emit_error(app, snapshot.id, message);
+    }
     snapshot
+}
+
+#[derive(Clone, serde::Serialize)]
+pub struct DocumentError {
+    id: u64,
+    message: String,
+}
+
+fn emit_error(app: &AppHandle, id: u64, message: String) {
+    let _ = app.emit("document-error", DocumentError { id, message });
+}
+
+fn refresh_from_watch(app: &AppHandle, generation: u64, notice: WatchNotice) {
+    let state = app.state::<ReaderState>();
+    let Ok(mut session) = state.lock() else {
+        return;
+    };
+    if generation != session.watch_generation {
+        return;
+    }
+    let result = match notice {
+        WatchNotice::Failed => {
+            Err("Automatic refresh failed. Reopen the file to restart it.".into())
+        }
+        WatchNotice::Changed => session
+            .current
+            .as_ref()
+            .ok_or_else(|| "No document is open.".to_owned())
+            .and_then(|current| crate::documents::read_markdown(&current.root, &current.relative)),
+    };
+    match result {
+        Ok(content) => {
+            let changed = session
+                .current
+                .as_ref()
+                .is_some_and(|current| current.snapshot.content != content);
+            if changed || session.error.is_some() {
+                session.revision += 1;
+                let revision = session.revision;
+                session.error = None;
+                session.image_bytes = 0;
+                if let Some(current) = session.current.as_mut() {
+                    current.snapshot.id = revision;
+                    current.snapshot.content = content;
+                    let _ = app.emit("document-changed", &current.snapshot);
+                }
+            }
+        }
+        Err(message) => {
+            if session.error.as_ref() != Some(&message) {
+                session.error = Some(message.clone());
+                emit_error(app, session.revision, message);
+            }
+        }
+    }
 }
 
 #[tauri::command]
@@ -97,8 +175,8 @@ pub async fn open_external(app: AppHandle, url: String) -> Result<(), String> {
 pub fn report_error(app: &AppHandle, message: String) {
     if let Ok(mut session) = app.state::<ReaderState>().lock() {
         session.error = Some(message.clone());
+        emit_error(app, session.revision, message);
     }
-    let _ = app.emit("document-error", message);
 }
 
 #[tauri::command]

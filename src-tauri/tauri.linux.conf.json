@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "linux": {
+      "deb": {
+        "desktopTemplate": "mivu.desktop",
+        "section": "text",
+        "depends": ["libxdo3", "shared-mime-info"],
+        "recommends": ["desktop-file-utils"],
+        "files": {
+          "/usr/share/mime/packages/mivu.xml": "mivu-mime.xml",
+          "/usr/share/doc/mivu/LICENSE": "../LICENSE"
+        },
+        "postInstallScript": "post-install.sh",
+        "postRemoveScript": "post-remove.sh"
+      },
+      "appimage": {
+        "files": {
+          "/usr/share/applications/mivu.desktop": "mivu.desktop"
+        }
+      }
+    }
+  }
+}

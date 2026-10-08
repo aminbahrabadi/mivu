@@ -194,3 +194,7 @@
   background: var(--highlight-current);
   box-shadow: 0 0 0 1px var(--accent);
 }
+.markdown blockquote:has(> p:dir(rtl)) {
+  direction: rtl;
+  border-radius: 6px 0 0 6px;
+}

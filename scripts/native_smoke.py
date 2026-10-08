@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import subprocess
 import time
+import tempfile
 import urllib.error
 import urllib.request
 
@@ -98,8 +99,21 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--binary', type=Path, default=ROOT / 'src-tauri/target/debug/mivu')
     parser.add_argument('--port', type=int, default=4446)
+    parser.add_argument('--deb', type=Path)
     args = parser.parse_args()
     env = os.environ | {'TAURI_WEBVIEW_AUTOMATION': 'true', 'GDK_BACKEND': 'x11'}
+    profile = ROOT / 'test-results/native-profile'
+    if args.deb:
+        extracted = ROOT / 'test-results/package-root'
+        extracted.mkdir(parents=True, exist_ok=True)
+        subprocess.run(['dpkg-deb', '--extract', str(args.deb), str(extracted)], check=True)
+        args.binary = extracted / 'usr/bin/mivu'
+        env['PATH'] = str(args.binary.parent) + os.pathsep + env['PATH']
+        env['XDG_DATA_DIRS'] = str(extracted / 'usr/share') + os.pathsep + env.get('XDG_DATA_DIRS', '/usr/local/share:/usr/share')
+        subprocess.run(['desktop-file-validate', str(extracted / 'usr/share/applications/Mivu.desktop')], check=True)
+        subprocess.run(['update-mime-database', str(extracted / 'usr/share/mime')], env=env, check=True)
+    for kind in ('data', 'config', 'cache'):
+        env[f'XDG_{kind.upper()}_HOME'] = str(profile / kind)
     driver = Driver(args.port)
     log_path = ROOT / 'test-results/native-driver.log'
     log_path.parent.mkdir(exist_ok=True)
@@ -143,7 +157,45 @@ def main():
             driver.request('POST', f'/session/{driver.session}/window/rect', {'width': 560, 'height': 720})
             assert driver.execute('return document.documentElement.scrollWidth <= window.innerWidth')
             driver.screenshot('persian-narrow.png')
-            print('PASS: native picker, raster image, local link, themes, search, zoom, RTL and narrow layout')
+            with tempfile.TemporaryDirectory(dir=ROOT / 'test-results') as temporary:
+                folder = Path(temporary)
+                path = folder / 'سلام with spaces.md'
+                long_text = '\n\nA paragraph for reading and scrolling.' * 100
+                path.write_text('# Initial' + long_text)
+                if args.deb:
+                    mime = subprocess.check_output(['xdg-mime', 'query', 'filetype', str(path)], env=env, text=True).strip()
+                    assert mime == 'text/markdown', mime
+                    subprocess.run(['gio', 'launch', str(extracted / 'usr/share/applications/Mivu.desktop'), str(path)], env=env, check=True, timeout=10)
+                    wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Initial')
+                subprocess.run([str(args.binary.resolve()), path.name], cwd=folder, env=env, check=True, timeout=10)
+                wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Initial')
+                driver.execute('document.querySelector("#reader").scrollTo({top:200,behavior:"instant"})')
+                original_scroll = driver.execute('return document.querySelector("#reader").scrollTop')
+                before = time.monotonic()
+                path.write_text('# Updated' + long_text)
+                wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Updated')
+                watch_ms = round((time.monotonic() - before) * 1000, 1)
+                assert abs(driver.execute('return document.querySelector("#reader").scrollTop') - original_scroll) < 2
+                replacement = folder / 'atomic.tmp'
+                replacement.write_text('# Atomic replacement' + long_text)
+                replacement.replace(path)
+                wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Atomic replacement')
+                path.unlink()
+                wait_for(lambda: driver.execute('return !document.querySelector("#error").hidden'))
+                assert driver.execute('return document.querySelector("h1")?.textContent') == 'Atomic replacement'
+                path.write_text('# Restored' + long_text)
+                wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Restored')
+                assert driver.execute('return document.querySelector("#error").hidden')
+                subprocess.run([str(args.binary.resolve()), 'missing.md'], cwd=folder, env=env, check=True, timeout=10)
+                wait_for(lambda: driver.execute('return !document.querySelector("#error").hidden'))
+                assert driver.execute('return document.querySelector("h1")?.textContent') == 'Restored'
+                driver.request('DELETE', f'/session/{driver.session}')
+                driver.session = None
+                result = driver.request('POST', '/session', {'capabilities': {'alwaysMatch': {
+                    'webkitgtk:browserOptions': {'binary': str(args.binary.resolve()), 'args': [str(path)]}}}})
+                driver.session = result['sessionId']
+                wait_for(lambda: driver.execute('return document.querySelector("h1")?.textContent') == 'Restored')
+                print(f'PASS: native reader, startup/second-instance CLI, watch/atomic replacement/deletion/recovery; observed refresh {watch_ms} ms')
         except Exception:
             print(driver.execute("return document.body.innerText"))
             subprocess.run(["xwininfo", "-root", "-tree"], check=False)
