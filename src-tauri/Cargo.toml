@@ -2,7 +2,7 @@
 name = "mivu"
 version = "0.1.0"
 description = "A minimal, beautiful, read-only Markdown reader."
-authors = ["Amin Bahrabadi"]
+authors = ["Amin Bahrabadi <39689258+aminbahrabadi@users.noreply.github.com>"]
 license = "MIT"
 repository = "https://github.com/aminbahrabadi/mivu"
 edition = "2021"

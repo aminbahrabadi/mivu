@@ -1,21 +1,26 @@
-name: Quality
+name: Linux quality and packages
 
 on:
   pull_request:
   push:
     branches: [main, feat/linux-v0.1]
+    tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: quality-${{ github.ref }}
-  cancel-in-progress: true
+  group: linux-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
-  check:
+  linux:
     runs-on: ubuntu-22.04
-    timeout-minutes: 30
+    timeout-minutes: 60
+    env:
+      CARGO_BUILD_JOBS: '4'
+      APPIMAGE_EXTRACT_AND_RUN: '1'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -28,10 +33,92 @@ jobs:
       - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
         with:
           components: rustfmt, clippy
-      - name: Linux build dependencies
+      - name: Linux build and native test dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libxdo-dev libssl-dev build-essential patchelf
+          sudo apt-get install -y --no-install-recommends pkg-config libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libxdo-dev libssl-dev build-essential patchelf webkit2gtk-driver xvfb xauth python3-gi gir1.2-gtk-3.0 x11-utils desktop-file-utils shared-mime-info
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck && pnpm lint && pnpm build
-      - run: pnpm check:rust
+      - run: pnpm check && pnpm format:check && pnpm check:rust
+      - name: Build and exercise native WebKit application
+        run: |
+          pnpm tauri build --debug --no-bundle --ci -- --locked
+          pnpm test:native
+      - name: Verify intentional version tag
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          version = json.load(open('package.json'))['version']
+          assert os.environ['RELEASE_TAG'] == 'v' + version
+          assert json.load(open('src-tauri/tauri.conf.json'))['version'] == version
+          assert re.search(r'^version = "([^"]+)"', open('src-tauri/Cargo.toml').read(), re.M).group(1) == version
+          PY
+      - name: Build Linux packages on the older compatibility baseline
+        if: github.event_name != 'pull_request'
+        run: pnpm package:linux
+      - name: Inspect and smoke-test Debian package
+        if: github.event_name != 'pull_request'
+        run: |
+          package=$(find src-tauri/target/release/bundle/deb -name '*.deb' -print -quit)
+          dpkg-deb --info "$package"
+          dpkg-deb --contents "$package"
+          xvfb-run -a python3 scripts/native_smoke.py --deb "$package"
+          image=$(find src-tauri/target/release/bundle/appimage -name "*.AppImage" -print -quit)
+          APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a python3 scripts/native_smoke.py --binary "$image"
+          python3 scripts/inspect_packages.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: github.event_name != 'pull_request'
+        with:
+          name: mivu-linux-x86_64
+          if-no-files-found: error
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/appimage/*.AppImage
+            test-results/package-manifest.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: native-test-diagnostics
+          path: test-results/native-driver.log
+
+  draft:
+    # This privileged job never checks out or executes build artifacts or PR code.
+    needs: linux
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: mivu-linux-x86_64
+          path: artifacts
+      - name: Verify tag, checksums and create a draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          VERIFIED_COMMIT: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, re, subprocess
+          tag = os.environ['RELEASE_TAG']
+          assert re.fullmatch(r'v\d+\.\d+\.\d+', tag)
+          commit = subprocess.check_output(['gh', 'api', 'repos/' + os.environ['GH_REPO'] + '/commits/' + tag, '--jq', '.sha'], text=True).strip()
+          assert commit == os.environ['VERIFIED_COMMIT'], 'Tag moved after verification'
+          root = pathlib.Path('artifacts')
+          manifests = list(root.rglob('package-manifest.json'))
+          assert len(manifests) == 1
+          files = []
+          for item in json.loads(manifests[0].read_text()):
+              matches = list(root.rglob(item['file']))
+              assert len(matches) == 1
+              assert hashlib.sha256(matches[0].read_bytes()).hexdigest() == item['sha256']
+              files.append(str(matches[0]))
+          assert any(p.endswith('.deb') for p in files) and any(p.endswith('.AppImage') for p in files)
+          subprocess.run(['gh', 'release', 'create', tag, '--verify-tag', '--draft', '--title', 'Mivu ' + tag[1:], '--notes', 'Linux candidate artifacts passed automated quality, native WebKit, and package checks. Complete the README manual desktop checklist before publishing.', *files, str(manifests[0])], check=True)
+          PY
