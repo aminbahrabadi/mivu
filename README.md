@@ -184,7 +184,7 @@ This is not an OS sandbox for the whole process. WebKit and raster decoding rema
 
 ### Linux integration and portability
 
-Linux packaging owns the freedesktop launcher, MIME XML, icons, and database-update maintainer scripts. `Exec=mivu %f` passes one file without shell interpolation. The single-instance plugin forwards later launch arguments and their working directory. AppImage startup restores the runtime-provided `OWD` (or preserved `PWD` in older extraction runtimes) before forwarding, because AppRun changes directories. Native GTK drops and file selection share the same validated opening flow.
+Linux packaging owns the freedesktop launcher, MIME XML, icons, and database-update maintainer scripts. `Exec=mivu %f` passes one file without shell interpolation. The single-instance plugin forwards later launch arguments and their working directory. AppImage startup temporarily restores the runtime-provided `OWD` (or preserved `PWD` in older extraction runtimes) for forwarding and captures it for initial arguments. It then returns to AppRun's directory before creating the WebKit view, whose bundled helper paths are relative. Native GTK drops and file selection share the same validated opening flow.
 
 Document validation, rendering, themes, and search are portable. CLI/path processing uses native path types. Windows/macOS icon assets exist, and platform libraries are isolated in Rust/Tauri and Linux bundle configuration. Windows/macOS builds, native associations, signed installers, and their lifecycle differences are future validation work; no cross-platform release is claimed. Non-UTF-8 filenames are not a supported v0.1 interface, although Unicode filenames are supported.
 

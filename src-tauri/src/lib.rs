@@ -9,6 +9,9 @@ use std::sync::Mutex;
 use tauri::{Emitter, Manager};
 
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    let appimage_directory =
+        std::env::var_os("APPIMAGE").and_then(|_| std::env::current_dir().ok());
     // AppRun changes cwd; restore it before single-instance forwarding captures it.
     #[cfg(target_os = "linux")]
     if let Some(directory) = std::env::var_os("APPIMAGE")
@@ -18,6 +21,7 @@ pub fn run() {
             eprintln!("Could not restore the AppImage launch directory.");
         }
     }
+    let launch_directory = std::env::current_dir();
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
             let app = app.clone();
@@ -42,7 +46,12 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(Mutex::new(Session::default()) as ReaderState)
-        .setup(|app| {
+        .setup(move |app| {
+            // Bundled WebKit helper paths are relative to AppRun's directory.
+            #[cfg(target_os = "linux")]
+            if let Some(directory) = appimage_directory {
+                std::env::set_current_dir(directory)?;
+            }
             let config = app
                 .config()
                 .app
@@ -54,7 +63,7 @@ pub fn run() {
                 .build()?;
             let handle = app.handle().clone();
             tauri::async_runtime::spawn_blocking(move || {
-                match std::env::current_dir()
+                match launch_directory
                     .map_err(|_| "Could not determine the launch directory.".to_owned())
                     .and_then(|cwd| cli::document_argument(std::env::args_os(), &cwd))
                 {

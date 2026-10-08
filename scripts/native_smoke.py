@@ -69,6 +69,13 @@ class Search(ctypes.Structure):
                 ('desktop', ctypes.c_long), ('limit', ctypes.c_uint)]
 
 
+class ClientMessage(ctypes.Structure):
+    _fields_ = [('type', ctypes.c_int), ('serial', ctypes.c_ulong),
+                ('send_event', ctypes.c_int), ('display', ctypes.c_void_p),
+                ('window', ctypes.c_ulong), ('message_type', ctypes.c_ulong),
+                ('format', ctypes.c_int), ('data', ctypes.c_long * 5)]
+
+
 def choose_native_file(path):
     lib = ctypes.CDLL('libxdo.so.3')
     lib.xdo_new.argtypes = [ctypes.c_char_p]
@@ -103,6 +110,46 @@ def choose_native_file(path):
     time.sleep(0.2)
     lib.xdo_send_keysequence_window(handle, 0, b'alt+o', 50000)
     lib.xdo_free(handle)
+
+
+def close_native_window():
+    lib = ctypes.CDLL('libxdo.so.3')
+    lib.xdo_new.argtypes = [ctypes.c_char_p]
+    lib.xdo_new.restype = ctypes.c_void_p
+    handle = lib.xdo_new(os.environ['DISPLAY'].encode())
+    assert handle
+    lib.xdo_search_windows.argtypes = [ctypes.c_void_p, ctypes.POINTER(Search),
+                                       ctypes.POINTER(ctypes.POINTER(ctypes.c_ulong)),
+                                       ctypes.POINTER(ctypes.c_uint)]
+    query = Search(winname=' — Mivu$'.encode(), searchmask=20, only_visible=1, max_depth=1, require=1)
+    windows = ctypes.POINTER(ctypes.c_ulong)()
+    count = ctypes.c_uint()
+    lib.xdo_search_windows(handle, ctypes.byref(query), ctypes.byref(windows), ctypes.byref(count))
+    assert count.value == 1, 'Expected one visible Mivu reader window'
+    window = windows[0]
+    lib.xdo_free.argtypes = [ctypes.c_void_p]
+    lib.xdo_free(handle)
+    # Send the same graceful close request as a window manager, not XDestroyWindow.
+    xlib = ctypes.CDLL('libX11.so.6')
+    xlib.XOpenDisplay.argtypes = [ctypes.c_char_p]
+    xlib.XOpenDisplay.restype = ctypes.c_void_p
+    display = xlib.XOpenDisplay(os.environ['DISPLAY'].encode())
+    assert display
+    xlib.XInternAtom.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int]
+    xlib.XInternAtom.restype = ctypes.c_ulong
+    xlib.XSendEvent.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_int, ctypes.c_long, ctypes.c_void_p]
+    xlib.XCloseDisplay.argtypes = [ctypes.c_void_p]
+    event = ctypes.create_string_buffer(ctypes.sizeof(ctypes.c_long) * 24)
+    message = ClientMessage.from_buffer(event)
+    message.type = 33
+    message.display = display
+    message.window = window
+    message.message_type = xlib.XInternAtom(display, b'WM_PROTOCOLS', 0)
+    message.format = 32
+    message.data[0] = xlib.XInternAtom(display, b'WM_DELETE_WINDOW', 0)
+    assert xlib.XSendEvent(display, window, 0, 0, event)
+    xlib.XCloseDisplay(display)
+    time.sleep(0.2)
 
 
 
@@ -203,8 +250,8 @@ def main():
                 long_text = '\n\nA paragraph for reading and scrolling.' * 100
                 path.write_text('# Initial' + long_text)
                 if args.deb:
-                    mime = subprocess.check_output(['xdg-mime', 'query', 'filetype', str(path)], env=env, text=True).strip()
-                    assert mime == 'text/markdown', mime
+                    mime = subprocess.check_output(['gio', 'info', '--attributes=standard::content-type', str(path)], env=env, text=True)
+                    assert 'standard::content-type: text/markdown' in mime, mime
                     subprocess.run(['gio', 'launch', str(extracted / 'usr/share/applications/Mivu.desktop'), str(path)], env=env, check=True, timeout=10)
                     wait_for(lambda: document_ready(driver, 'Initial'))
                 subprocess.run([str(args.binary.resolve()), path.name], cwd=folder, env=env | {'PWD': str(folder)}, check=True, timeout=10)
@@ -214,7 +261,7 @@ def main():
                 drag = folder / 'dropped.markdown'
                 drag.write_text('# Dropped document')
                 if args.deb:
-                    assert subprocess.check_output(['xdg-mime', 'query', 'filetype', str(drag)], env=env, text=True).strip() == 'text/markdown'
+                    assert 'standard::content-type: text/markdown' in subprocess.check_output(['gio', 'info', '--attributes=standard::content-type', str(drag)], env=env, text=True)
                 drag_file(drag, env)
                 wait_for(lambda: document_ready(driver, 'Dropped document'))
                 subprocess.run([str(args.binary.resolve()), str(path)], env=env, check=True, timeout=10)
@@ -239,10 +286,11 @@ def main():
                 subprocess.run([str(args.binary.resolve()), 'missing.md'], cwd=folder, env=env | {'PWD': str(folder)}, check=True, timeout=10)
                 wait_for(lambda: driver.execute('return !document.querySelector("#error").hidden'))
                 assert driver.execute('return document.querySelector("h1")?.textContent') == 'Restored'
+                close_native_window()
                 driver.request('DELETE', f'/session/{driver.session}')
                 driver.session = None
                 result = driver.request('POST', '/session', {'capabilities': {'alwaysMatch': {
-                    'webkitgtk:browserOptions': {'binary': str(args.binary.resolve()), 'args': [str(path)]}}}})
+                    'webkitgtk:browserOptions': {'binary': str(args.binary.resolve()), 'args': [str(path.relative_to(ROOT))]}}}})
                 driver.session = result['sessionId']
                 wait_for(lambda: document_ready(driver, 'Restored'))
                 subprocess.run([str(args.binary.resolve()), str(ROOT / 'tests/fixtures/adversarial.md')], env=env, check=True, timeout=10)
@@ -264,7 +312,9 @@ def main():
             raise
         finally:
             if driver.session:
-                try: driver.request('DELETE', f'/session/{driver.session}')
+                try:
+                    close_native_window()
+                    driver.request('DELETE', f'/session/{driver.session}')
                 except (OSError, AssertionError): pass
             process.terminate()
             process.wait(timeout=10)
