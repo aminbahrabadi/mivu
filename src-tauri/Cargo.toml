@@ -1,0 +1,42 @@
+[package]
+name = "mivu"
+version = "0.1.0"
+description = "A minimal, beautiful, read-only Markdown reader."
+authors = ["Amin Bahrabadi <39689258+aminbahrabadi@users.noreply.github.com>"]
+license = "MIT"
+repository = "https://github.com/aminbahrabadi/mivu"
+edition = "2021"
+rust-version = "1.90"
+
+[lib]
+name = "mivu_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-opener = "2"
+cap-std = "4"
+notify = "8"
+base64 = "0.23"
+url = "2"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.dev]
+debug = 0
+incremental = false
+
+[profile.release]
+strip = true
+lto = "thin"
+codegen-units = 1

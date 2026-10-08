@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Mivu
+Comment=Just read Markdown.
+Exec=mivu %f
+Icon=mivu
+Terminal=false
+Categories=Office;Viewer;
+MimeType=text/markdown;text/x-markdown;
+Keywords=Markdown;Reader;Read;
+StartupNotify=true
+StartupWMClass=mivu

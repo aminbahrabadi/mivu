@@ -1,0 +1,11 @@
+pnpm-lock.yaml
+src-tauri/Cargo.lock
+src-tauri/target
+src-tauri/gen
+node_modules
+dist
+test-results
+playwright-report
+*.png
+*.ico
+*.icns

@@ -1,0 +1,47 @@
+{
+  "recorded_at": "2026-10-08T13:36:20.768064+00:00",
+  "source_commit": "b885a622506ce82bdaeb16b0607518aaa4d02202",
+  "binary_sha256": "4e668c16afcbe4fe697c6b26401833234a3a26fb2910ac8ce2f4c98b26f3f73b",
+  "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+  "cpu": "12th Gen Intel(R) Core(TM) i7-12650H",
+  "binary": "src-tauri/target/release/mivu",
+  "webkit": "2.52.6",
+  "conditions": "Isolated X11 display. Process-cold starts with warm OS caches. Open timings include single-instance IPC, parse, sanitize and DOM insertion; images may still decode. RSS includes WebKit descendants and double-counts shared pages. Three samples per case; polling every 10 ms. Complete-open timings wait for aria-busy=false. First content means first heading in the DOM, not paint. A 50 ms timer estimates main-thread scheduling gaps. RSS sampled after one idle second.",
+  "startup_ms": [1983.94, 977.34, 991.51],
+  "documents": {
+    "8": {
+      "bytes": 8171,
+      "open_ms": [185.7, 114.81, 106.6],
+      "first_content_ms": [166.65, 99.6, 92.18],
+      "max_timer_gap_ms": [123, 52, 52.99999999999977],
+      "median_ms": 114.81,
+      "rss_tree_mib": 469.32
+    },
+    "64": {
+      "bytes": 65222,
+      "open_ms": [209.65, 199.61, 204.05],
+      "first_content_ms": [138.8, 134.38, 133.94],
+      "max_timer_gap_ms": [64, 58, 86.99999999999955],
+      "median_ms": 204.05,
+      "rss_tree_mib": 546.2
+    },
+    "512": {
+      "bytes": 524068,
+      "open_ms": [1046.01, 1088.48, 1080.43],
+      "first_content_ms": [214.08, 276.89, 289.53],
+      "max_timer_gap_ms": [94, 93, 93],
+      "median_ms": 1080.43,
+      "rss_tree_mib": 778.97
+    },
+    "2048": {
+      "bytes": 2097019,
+      "open_ms": [5850.62, 5855.98, 6852.93],
+      "first_content_ms": [733.52, 669.07, 590.15],
+      "max_timer_gap_ms": [109, 196, 186],
+      "median_ms": 5855.98,
+      "rss_tree_mib": 1232.96
+    }
+  },
+  "watch_ms": [386.96, 380.17, 371.2],
+  "empty_rss_tree_mib": 439.42
+}
