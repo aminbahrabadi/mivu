@@ -52,5 +52,5 @@ runtime; extension syntax, behavioral and package checks validate it separately.
 
 Desktop and Firefox versions evolve independently, with no speculative shared
 runtime package. Until the Desktop integration is merged, the Firefox integration
-PR targets feat/linux-v0.1; rebase/retarget deliberately after that dependency is
-resolved, without rewriting shared history. Never publish to AMO automatically.
+PR targets feat/linux-v0.1; retarget after that dependency is resolved, or merge
+base updates to resolve conflicts. Never rewrite shared history. Never publish to AMO automatically.

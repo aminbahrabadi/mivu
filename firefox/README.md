@@ -256,7 +256,7 @@ sources/provenance must be addressed with Mozilla. Read
 5. Exercise Ctrl/Command+O, Ctrl/Command+F, Enter/Shift+Enter, Escape,
    Ctrl/Command++/−/0, Ctrl/Command+C and keyboard scrolling. Search stops at 500
    results and does not join text across inline formatting. Zoom steps are 10%;
-   the submitted rounding/clamping permits approximately 80–175%.
+   the submitted clamp permits 75–175%.
 6. Open `tests/fixtures/adversarial.md`; confirm no active markup or automatic
    remote requests. Click a normal external link deliberately. Try empty,
    wrong-type, invalid-UTF-8 and missing/unavailable selected documents.
