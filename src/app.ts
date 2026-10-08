@@ -3,6 +3,8 @@ import { listen } from '@tauri-apps/api/event';
 import type { DocumentSnapshot, InitialState } from './core/document';
 import { errorMessage } from './core/document';
 import { renderMarkdown } from './core/markdown';
+import { classifyReference } from './core/links';
+import { loadImages, scrollToFragment } from './ui/reader';
 
 export async function startApp(root: HTMLElement): Promise<void> {
   root.innerHTML = `
@@ -21,7 +23,13 @@ export async function startApp(root: HTMLElement): Promise<void> {
     currentId = doc.id;
     alert.hidden = true;
     root.querySelector<HTMLElement>('#document-title')!.textContent = doc.name;
-    reader.replaceChildren(renderMarkdown(doc.content));
+    const article = document.createElement('article');
+    article.className = 'markdown';
+    article.append(renderMarkdown(doc.content));
+    reader.replaceChildren(article);
+    void loadImages(article, (reference) =>
+      invoke<string>('read_image', { id: doc.id, reference }),
+    );
     reader.scrollTop = 0;
     reader.focus();
   }
@@ -45,8 +53,33 @@ export async function startApp(root: HTMLElement): Promise<void> {
       void open();
     }
   });
+  async function followLink(event: MouseEvent): Promise<void> {
+    const link = (event.target as Element).closest<HTMLAnchorElement>('a');
+    if (!link) return;
+    event.preventDefault();
+    const reference = classifyReference(link.getAttribute('href') ?? '');
+    try {
+      if (reference.kind === 'fragment')
+        scrollToFragment(reader, reference.fragment);
+      else if (reference.kind === 'local') {
+        const doc = await invoke<DocumentSnapshot>('open_relative', {
+          id: currentId,
+          reference: reference.path,
+        });
+        display(doc);
+        if (reference.fragment) scrollToFragment(reader, reference.fragment);
+      } else if (reference.kind === 'external' && event.isTrusted)
+        await invoke('open_external', { url: reference.url });
+      else if (reference.kind === 'blocked') showError(reference.reason);
+    } catch (error) {
+      showError(error);
+    }
+  }
   reader.addEventListener('click', (event) => {
-    if ((event.target as Element).closest('a')) event.preventDefault();
+    void followLink(event);
+  });
+  reader.addEventListener('auxclick', (event) => {
+    void followLink(event);
   });
   await listen<DocumentSnapshot>('document-changed', (event) => {
     display(event.payload);

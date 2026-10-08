@@ -8,10 +8,14 @@ use tauri::Manager;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .manage(Mutex::new(Session::default()) as ReaderState)
         .invoke_handler(tauri::generate_handler![
             commands::pick_document,
-            commands::current_document
+            commands::current_document,
+            commands::open_relative,
+            commands::read_image,
+            commands::open_external
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event {

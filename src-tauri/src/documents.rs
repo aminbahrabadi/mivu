@@ -1,4 +1,5 @@
-use cap_std::fs::{Dir, File};
+use base64::Engine;
+use cap_std::fs::{Dir, File, OpenOptions};
 use serde::Serialize;
 use std::{io::Read, path::Path, path::PathBuf};
 
@@ -16,7 +17,7 @@ pub struct Document {
 pub struct OpenDocument {
     pub snapshot: Document,
     pub root: Dir,
-    pub path: PathBuf,
+    pub folder: PathBuf,
     pub relative: PathBuf,
 }
 
@@ -52,9 +53,7 @@ pub fn read_bounded(file: File, limit: u64) -> Result<Vec<u8>, String> {
 
 pub fn read_markdown(root: &Dir, relative: &Path) -> Result<String, String> {
     validate_extension(relative)?;
-    let file = root.open(relative).map_err(|_| {
-        "Could not open this file. It may be missing, inaccessible, or outside the document folder."
-    })?;
+    let file = open_readonly(root, relative)?;
     let bytes = read_bounded(file, MAX_DOCUMENT_BYTES)?;
     let content = String::from_utf8(bytes)
         .map_err(|_| "This file is not valid UTF-8. Convert it to UTF-8 in a text editor.")?;
@@ -77,6 +76,7 @@ impl OpenDocument {
             .map_err(|_| "Could not resolve this file's path.")?;
         validate_extension(&path)?;
         let parent = path.parent().ok_or("This file has no parent folder.")?;
+        let folder = parent.to_owned();
         let relative = PathBuf::from(path.file_name().ok_or("This file has no name.")?);
         let root = Dir::open_ambient_dir(parent, cap_std::ambient_authority())
             .map_err(|_| "Could not access the document folder.")?;
@@ -90,15 +90,139 @@ impl OpenDocument {
         Ok(Self {
             snapshot,
             root,
-            path,
+            folder,
             relative,
         })
     }
+
+    pub fn resolve(&self, reference: &str) -> Result<PathBuf, String> {
+        if reference.is_empty()
+            || reference.contains(['\\', ':', '\0'])
+            || Path::new(reference).is_absolute()
+        {
+            return Err("Only relative references inside the document folder are allowed.".into());
+        }
+        let relative = self
+            .relative
+            .parent()
+            .unwrap_or(Path::new(""))
+            .join(reference);
+        self.root
+            .canonicalize(relative)
+            .map_err(|_| "This reference is missing or outside the document folder.".into())
+    }
+
+    pub fn linked(&self, reference: &str, id: u64) -> Result<Self, String> {
+        let relative = self.resolve(reference)?;
+        let content = read_markdown(&self.root, &relative)?;
+        let path = self.folder.join(&relative);
+        Ok(Self {
+            snapshot: Document {
+                id,
+                name: relative
+                    .file_name()
+                    .ok_or("Missing filename.")?
+                    .to_string_lossy()
+                    .into_owned(),
+                path: path.to_string_lossy().into_owned(),
+                content,
+            },
+            root: self
+                .root
+                .try_clone()
+                .map_err(|_| "Could not retain the document folder.")?,
+            folder: self.folder.clone(),
+            relative,
+        })
+    }
+
+    pub fn image(&self, reference: &str) -> Result<(String, usize), String> {
+        let relative = self.resolve(reference)?;
+        let extension = relative
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        if !matches!(extension.as_str(), "png" | "jpg" | "jpeg" | "gif" | "webp") {
+            return Err("Only PNG, JPEG, GIF, and WebP images are supported.".into());
+        }
+        let bytes = read_bounded(open_readonly(&self.root, &relative)?, 4 * 1024 * 1024)?;
+        let mime = match extension.as_str() {
+            "png" if bytes.starts_with(b"\x89PNG\r\n\x1a\n") => "image/png",
+            "jpg" | "jpeg" if bytes.starts_with(&[0xff, 0xd8, 0xff]) => "image/jpeg",
+            "gif" if bytes.starts_with(b"GIF87a") || bytes.starts_with(b"GIF89a") => "image/gif",
+            "webp" if bytes.starts_with(b"RIFF") && bytes.get(8..12) == Some(b"WEBP") => {
+                "image/webp"
+            }
+            _ => return Err("The image contents do not match its file type.".into()),
+        };
+        let length = bytes.len();
+        Ok((
+            format!(
+                "data:{mime};base64,{}",
+                base64::engine::general_purpose::STANDARD.encode(bytes)
+            ),
+            length,
+        ))
+    }
+}
+
+fn open_readonly(root: &Dir, relative: &Path) -> Result<File, String> {
+    let mut options = OpenOptions::new();
+    options.read(true);
+    // A renamed FIFO must not block the reader before regular-file validation.
+    #[cfg(unix)]
+    {
+        use cap_std::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NONBLOCK);
+    }
+    root.open_with(relative, &options).map_err(|_| "Could not open this file. It may be missing, inaccessible, or outside the document folder.".into())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn relative_resources_stay_in_the_selected_folder() {
+        let dir = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("docs")).unwrap();
+        std::fs::write(dir.path().join("readme.md"), "home").unwrap();
+        std::fs::write(dir.path().join("docs/linked.markdown"), "linked").unwrap();
+        let image = include_bytes!("../icons/32x32.png");
+        std::fs::write(dir.path().join("image.png"), image).unwrap();
+        std::fs::write(outside.path().join("secret.md"), "secret").unwrap();
+        let open = OpenDocument::selected(&dir.path().join("readme.md"), 1).unwrap();
+        let linked = open.linked("docs/linked.markdown", 2).unwrap();
+        assert_eq!(linked.snapshot.content, "linked");
+        assert_eq!(
+            linked.linked("../readme.md", 3).unwrap().snapshot.content,
+            "home"
+        );
+        assert!(linked
+            .image("../image.png")
+            .unwrap()
+            .0
+            .starts_with("data:image/png;base64,"));
+        assert!(open.resolve("../secret.md").is_err());
+        assert!(open.resolve("/etc/passwd").is_err());
+        assert!(open.resolve("C:\\secret.md").is_err());
+        assert!(open.image("readme.md").is_err());
+        std::fs::write(dir.path().join("fake.png"), "<svg onload='evil'/>").unwrap();
+        assert!(open.image("fake.png").is_err());
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(outside.path(), dir.path().join("escape")).unwrap();
+            assert!(open.linked("escape/secret.md", 2).is_err());
+            std::os::unix::fs::symlink(
+                outside.path().join("secret.md"),
+                dir.path().join("alias.md"),
+            )
+            .unwrap();
+            assert!(open.linked("alias.md", 2).is_err());
+        }
+    }
 
     #[test]
     fn selected_files_are_bounded_utf8_markdown() {

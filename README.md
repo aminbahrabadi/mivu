@@ -4,17 +4,18 @@
 
 A minimal, beautiful, read-only Markdown reader. MIT licensed, Linux-first, built with Tauri 2, Rust, and vanilla TypeScript. Version 0.1.0 is in development; it is not yet a validated release.
 
-## Development
-
 ## Implemented features
 
 - Native open dialog and drag-and-drop, UTF-8 Markdown, friendly errors, Unicode paths.
 - Read-only rendering, bounded documents (8 MiB), and Ctrl+O.
+- GFM tables, task lists, nested lists, autolinks, syntax highlighting, local Markdown links and PNG/JPEG/GIF/WebP images.
 - No editing, accounts, telemetry, cloud, plugins, terminals, or remote content loading.
 
 ## Architecture
 
 Rust owns explicitly selected documents. The main window can request the native picker or the current snapshot; it cannot read arbitrary paths. TypeScript receives a revisioned snapshot and renders through markdown-it with raw HTML disabled and DOMPurify sanitization. Failed opens leave the previous document intact. Source files are opened for reading only.
+
+The selected document's parent directory becomes a `cap-std` directory capability. Linked documents and images resolve relative to the active document, inside that original boundary. Traversal and symlink escapes fail even during path replacement. Raster images are size-limited and signature-checked; SVG and remote images are blocked. HTTP(S) and mail links open outside Mivu only on a user click.
 
 ## Development setup
 
@@ -36,7 +37,7 @@ The durable execution plan is [docs/implementation.md](docs/implementation.md). 
 | ----- | ----------------------------- | --------- |
 | 0     | Tooling, shell, CI            | Validated |
 | 1     | Native file opening           | Validated |
-| 2     | Secure Markdown rendering     | Pending   |
+| 2     | Secure Markdown rendering     | Validated |
 | 3     | Reading experience and RTL    | Pending   |
 | 4     | Linux integration and refresh | Pending   |
 | 5     | Security and robustness       | Pending   |
