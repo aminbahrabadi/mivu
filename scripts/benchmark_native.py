@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Measure the built application on an isolated display; never touches user files."""
 import argparse
+import datetime
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -35,6 +37,9 @@ def main():
     binary = args.binary.resolve()
     fixture = (ROOT / 'tests/fixtures/reading.md').read_text()
     report = {
+        'recorded_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
+        'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
         'platform': platform.platform(), 'cpu': next((line.split(':', 1)[1].strip() for line in Path('/proc/cpuinfo').read_text().splitlines() if line.startswith('model name')), platform.processor()),
         'binary': str(binary.relative_to(ROOT)) if binary.is_relative_to(ROOT) else str(binary), 'webkit': subprocess.check_output(['pkg-config', '--modversion', 'webkit2gtk-4.1'], text=True).strip(),
         'conditions': 'Isolated X11 display. Process-cold starts with warm OS caches. Open timings include single-instance IPC, parse, sanitize and DOM insertion; images may still decode. RSS includes WebKit descendants and double-counts shared pages. Three samples per case; polling every 10 ms. Complete-open timings wait for aria-busy=false. First content means first heading in the DOM, not paint. A 50 ms timer estimates main-thread scheduling gaps. RSS sampled after one idle second.',
@@ -65,6 +70,9 @@ def main():
                 session = driver.request('POST', '/session', {'capabilities': {'alwaysMatch': {'webkitgtk:browserOptions': {'binary': str(binary.relative_to(ROOT)) if binary.is_relative_to(ROOT) else str(binary), 'args': []}}}})
                 driver.session = session['sessionId']
                 wait_for(lambda: driver.execute('return !!document.querySelector("#theme")'))
+                time.sleep(1)
+                children = Path(f'/proc/{process.pid}/task/{process.pid}/children').read_text().split()
+                report['empty_rss_tree_mib'] = round(sum(rss_tree(int(child)) for child in children) / 1024, 2)
                 for kib in (8, 64, 512, 2048):
                     content = fixture * max(1, (kib * 1024) // len(fixture.encode()))
                     measurements = []
