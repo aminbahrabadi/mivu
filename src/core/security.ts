@@ -46,6 +46,8 @@ export function sanitizeHtml(html: string): DocumentFragment {
       'data-image-ref',
     ],
     ALLOW_DATA_ATTR: false,
+    // This inert field is revalidated by loadImages before becoming an img source.
+    ADD_URI_SAFE_ATTR: ['data-image-ref'],
   });
   for (const input of fragment.querySelectorAll('input')) {
     if (input.type !== 'checkbox') {

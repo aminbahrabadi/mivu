@@ -17,6 +17,12 @@ All notable user-facing changes will be recorded here. The format follows [Keep 
 - Recorded pending-image selection, resource-budget and reading limitations for
   correction in a subsequent Firefox version; no submitted runtime change.
 
+## [Desktop 0.1.1] — 2026-10-09
+
+### Fixed
+
+- Rendered embedded base64 raster images from Markdown exports, including reference definitions such as `![][image2]`, with MIME/signature/byte validation and existing image budgets. Data links, SVG and remote images remain blocked.
+
 ## [Desktop 0.1.0] — 2026-10-08
 
 First Linux release for Zorin OS 18.1 / Ubuntu 24.04. Automated frontend, Rust, native WebKit and package checks are required before publication. Human installed-desktop acceptance is deferred by maintainer decision until after release; Ubuntu 22.04 and Debian 12 installation support remains unconfirmed.

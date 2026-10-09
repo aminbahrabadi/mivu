@@ -1,4 +1,4 @@
-# v0.1.0 validation record
+# Desktop validation record
 
 This is evidence for release consideration, not a declaration of a fully validated release. README.md remains canonical for product behavior and architecture.
 
@@ -34,6 +34,20 @@ The post-merge table fix is checked against `tests/fixtures/tables.md`, a repres
 `tests/fixtures/mixed-rtl.md` reproduces English-prefixed Persian paragraphs and bullets, an English paragraph containing a Persian quotation, opposite-direction nested lists, inline code/URLs, a blockquote and table cells. The original preview binary fails the native regression: the first two paragraphs and four bullets are LTR, with no RTL list indentation. The updated debug binary passes the full suite in both themes at 1000/560 pixel widths, including 180% zoom, English phrase geometry, list indentation, LTR code, unchanged search text and containment. Maximum zoom exposed mixed-list markers overflowing their parent; assigning logical indentation to each item fixes it. Automatic direction remains a word-share heuristic; the original private document was not opened or copied.
 
 The rebuilt Zorin/Ubuntu 24.04 `.deb` also passed the complete extracted-package native suite and apt reinstall simulation. It is 3,691,380 bytes, requires glibc >= 2.39, and has SHA-256 `ed4e6afc992b1d603b935ad0ad79b4ac9054222d00d3baf1a4bd7ef955f0c180`. Its metadata and integration files were checked; this is local package evidence, not a host installation or an AppImage rebuild. The existing published preview assets remain unchanged.
+
+## v0.1.1 embedded-image fix
+
+A Markdown export with four reference-style embedded PNGs reproduced literal `![][imageN]` text in the published reader: the parser URL gate rejected the data definitions. A project-owned fixture now checks reference/inline forms, including mixed-case MIME prefixes, without tracking the private document or its image contents. The renderer validates base64 shape, a 4 MiB decoded limit and matching PNG/JPEG/GIF/WebP signatures. Only inert `data-image-ref` values survive sanitization; `src`, data links, SVG and remote images stay blocked. Embedded and local images share the 128-element/32 MiB encoded-source renderer budgets. Decoded pixel dimensions remain an existing documented limit.
+
+- `pnpm check`: TypeScript, ESLint, 66 frontend tests and production build passed. The new export regression fails before the fix and passes afterward. Security cases cover malformed/control-containing base64, MIME mismatches, HTML/SVG, limits, budget sharing and decode failures; worker batches retain reference definitions.
+- `pnpm check:rust`: formatting, Clippy and all 7 tests passed; native commands/capabilities and Rust source are unchanged.
+- Formatting checks and Python harness compilation passed.
+- The complete native GTK/WebKit suite passed against the debug app and extracted Debian package, including the new embedded-image fixture.
+- A separate isolated native probe opened the user-provided export, scrolled to its lazy images and confirmed all four decoded sizes (613×398, 480×607, 613×464 and 587×585). Light/dark and 1000/560 px layouts passed; the original document SHA-256 is unchanged. Private screenshots and the probe stay in ignored `test-results/embedded-image-check/`.
+
+The local validation `.deb` is 3,691,800 bytes, requires glibc >= 2.39 and has SHA-256 `50ece63c4cdd4607bc750c494215ed3105f6e52a14cb35c588645ab3ecb88f92`. Metadata and desktop/MIME/license contents passed inspection. This is an unreleased validation build with package version 0.1.0, not a replacement for the immutable GitHub v0.1.0 assets. No AppImage rebuild or host installation was performed for this fix.
+
+Desktop v0.1.1 publishes this fix through the tagged Ubuntu 22.04 CI workflow after automated checks and package checksum verification. The maintainer explicitly deferred installed-desktop acceptance until after release. The earlier local v0.1.0 validation build above is separate from the [v0.1.1 release assets](https://github.com/aminbahrabadi/mivu/releases/tag/v0.1.1).
 
 ## Performance methodology
 

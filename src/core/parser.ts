@@ -10,6 +10,7 @@ import rust from 'highlight.js/lib/languages/rust';
 import typescript from 'highlight.js/lib/languages/typescript';
 import xml from 'highlight.js/lib/languages/xml';
 import { classifyReference } from './links';
+import { embeddedImageSource } from './images';
 
 for (const [name, grammar] of Object.entries({
   bash,
@@ -39,7 +40,9 @@ export const parser = new MarkdownIt({
 }).use(tasks, { enabled: false });
 
 parser.validateLink = (value) =>
-  typeof value === 'string' && classifyReference(value).kind !== 'blocked';
+  typeof value === 'string' &&
+  (classifyReference(value).kind !== 'blocked' ||
+    embeddedImageSource(value) !== null);
 parser.renderer.rules.image = (tokens, index) => {
   const token = tokens[index]!;
   const source = token.attrGet('src');
