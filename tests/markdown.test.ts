@@ -3,8 +3,32 @@ import { renderMarkdown } from '../src/core/markdown';
 import { sanitizeHtml } from '../src/core/security';
 import { classifyReference } from '../src/core/links';
 import { loadImages } from '../src/ui/reader';
+import embeddedFixture from './fixtures/embedded-images.md?raw';
 
 describe('Markdown reading pipeline', () => {
+  it('renders embedded reference and inline images without filesystem or network access', async () => {
+    const article = document.createElement('article');
+    article.append(renderMarkdown(embeddedFixture));
+    document.body.append(article);
+    try {
+      expect(article.querySelectorAll('img')).toHaveLength(5);
+      const requested: string[] = [];
+      await loadImages(article, async (path) => {
+        requested.push(path);
+        throw new Error('Embedded images must not request local files');
+      });
+      expect(requested).toEqual([]);
+      expect(
+        article.querySelectorAll('img[src^="data:image/png;base64,"]'),
+      ).toHaveLength(4);
+      expect(article.textContent).toContain('Remote image blocked');
+      expect(article.textContent).not.toContain('![][image');
+      expect(article.querySelector('a')?.hasAttribute('href')).toBe(false);
+    } finally {
+      article.remove();
+    }
+  });
+
   it('does not attach stale image replies or lose the reason for missing images', async () => {
     const article = document.createElement('article');
     article.append(renderMarkdown('![missing](missing.png)'));

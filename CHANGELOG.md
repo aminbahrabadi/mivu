@@ -4,6 +4,10 @@ All notable user-facing changes will be recorded here. The format follows [Keep 
 
 ## [Unreleased]
 
+### Desktop — Fixed
+
+- Rendered embedded base64 raster images from Markdown exports, including reference definitions such as `![][image2]`, with MIME/signature/byte validation and existing image budgets. Data links, SVG and remote images remain blocked.
+
 ### Firefox integration
 
 - Imported submitted Firefox 0.1.0 sources unchanged, with complete source/runtime

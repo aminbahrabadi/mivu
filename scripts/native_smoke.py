@@ -226,6 +226,15 @@ def main():
             driver.execute('document.querySelector("#theme").value="dark"; document.querySelector("#theme").dispatchEvent(new Event("change"))')
             driver.screenshot('reader-dark.png')
             driver.execute('document.querySelector("[data-action=open]").click()')
+            choose_native_file(ROOT / 'tests/fixtures/embedded-images.md')
+            wait_for(lambda: document_ready(driver, 'Embedded image export'))
+            wait_for(lambda: driver.execute('return [...document.querySelectorAll("article img")].filter(img => img.complete && img.naturalWidth === 32).length') == 4)
+            assert driver.execute('return !document.querySelector("article a[href^=data],article img[src^=http]") && document.querySelector("article").textContent.includes("Remote image blocked") && !document.querySelector("article").textContent.includes("![][image")')
+            for theme in ('light', 'dark'):
+                driver.execute('document.querySelector("#theme").value=arguments[0]; document.querySelector("#theme").dispatchEvent(new Event("change"))', theme)
+                driver.execute('document.querySelector("#reader").scrollTo({top:0,behavior:"instant"}); document.activeElement.blur()')
+                driver.screenshot(f'embedded-images-{theme}.png')
+            driver.execute('document.querySelector("[data-action=open]").click()')
             choose_native_file(ROOT / 'tests/fixtures/tables.md')
             wait_for(lambda: document_ready(driver, 'Readable tables'))
             for theme, width, zoom in (('light', 1000, 100), ('light', 560, 100), ('dark', 1000, 100), ('dark', 560, 100), ('dark', 560, 180)):

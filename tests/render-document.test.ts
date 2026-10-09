@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { markdownChunks, parser } from '../src/core/parser';
 import { renderDocument } from '../src/core/render-document';
 import fixture from './fixtures/reading.md?raw';
+import embeddedFixture from './fixtures/embedded-images.md?raw';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -12,6 +13,18 @@ it('batches complete Markdown blocks without losing reference links or nested st
   const parts = Array.from(markdownChunks(source));
   expect(parts.length).toBeGreaterThan(1);
   expect(parts.join('')).toBe(parser.render(source));
+});
+
+it('retains embedded reference definitions across worker batches', () => {
+  const parts = Array.from(markdownChunks(embeddedFixture.repeat(100)));
+  expect(parts.length).toBeGreaterThan(1);
+  expect(parts.join('')).toBe(parser.render(embeddedFixture.repeat(100)));
+  expect(
+    (
+      parts.join('').match(/<img data-image-ref="data:image\/png;base64,/gi) ??
+      []
+    ).length,
+  ).toBe(400);
 });
 
 it('sanitizes worker output and terminates obsolete rendering', async () => {

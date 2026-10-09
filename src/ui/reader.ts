@@ -1,4 +1,5 @@
 import { classifyReference } from '../core/links';
+import { embeddedImageSource } from '../core/images';
 
 export function scrollToFragment(reader: HTMLElement, fragment: string): void {
   const heading = Array.from(reader.querySelectorAll('[id]')).find(
@@ -21,12 +22,15 @@ export async function loadImages(
       const index = cursor++;
       const image = images[index]!;
       if (!article.isConnected) return;
-      const ref = classifyReference(image.dataset.imageRef ?? '');
+      const reference = image.dataset.imageRef ?? '';
+      const ref = classifyReference(reference);
+      const embedded = embeddedImageSource(reference);
       let reason = 'Image unavailable';
       if (ref.kind === 'external') reason = 'Remote image blocked';
-      else if (ref.kind === 'local' && index < 128) {
+      else if ((ref.kind === 'local' || embedded !== null) && index < 128) {
         try {
-          const source = await readImage(ref.path);
+          const source =
+            ref.kind === 'local' ? await readImage(ref.path) : embedded!;
           total += source.length;
           if (total > 32 * 1024 * 1024)
             throw new Error('Image budget exceeded');
@@ -46,7 +50,9 @@ export async function loadImages(
           );
           continue;
         } catch {
-          reason = 'Local image unavailable';
+          reason = embedded
+            ? 'Embedded image unavailable'
+            : 'Local image unavailable';
         }
       }
       image.replaceWith(imagePlaceholder(image.alt, reason));

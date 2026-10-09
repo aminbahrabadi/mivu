@@ -53,6 +53,8 @@ Implemented:
 - Debounced external-change refresh, including atomic saves, with scroll preservation.
 - Debian/AppImage packaging configuration, desktop entry, and Markdown MIME registration.
 
+Unreleased desktop improvement: reference-style and inline embedded PNG/JPEG/GIF/WebP images from Markdown exports, with byte/signature validation. This is not included in the published v0.1.0 package.
+
 Remote images, SVG images, raw HTML, editing/saving, code execution, accounts, cloud synchronization, databases, telemetry, plugins, and terminals are intentionally outside v0.1. Mermaid diagrams and mathematics are proposed future features, not currently rendered.
 
 ## Screenshots
@@ -237,7 +239,7 @@ TypeScript owns the toolbar, rendered article, current snapshot, search UI, and 
 3. A bounded read accepts valid UTF-8, strips an optional UTF-8 BOM, and publishes a revisioned snapshot. Failed opens retain the previous snapshot.
 4. A dedicated worker parses with raw HTML disabled; eight explicit highlight.js grammars color supported fenced code. It emits complete top-level blocks in small batches with frontend backpressure. DOMPurify sanitizes each batch before insertion; no worker HTML bypasses the sanitizer. Switching documents terminates obsolete workers.
 5. The renderer validates links, assigns unique heading IDs, infers each prose block/list/table cell's direction, and sets code to `dir="ltr"`. The reader inserts sanitized fragments between animation frames, keeping long-document parsing off the UI thread. A single enormous nested block can still require a larger insertion.
-6. Images initially have inert references, never document-provided `src` URLs. A small worker pool requests bounded raster bytes from Rust and inserts validated data URLs. Stale responses are discarded.
+6. Images initially have inert references, never document-provided `src` URLs. A small worker pool requests bounded local raster bytes from Rust and inserts validated data URLs. The unreleased embedded-image path validates base64, decoded byte length and MIME-matching signatures directly from the selected document, with no extra file reads or network requests. Stale responses are discarded.
 
 Desktop direction inference counts Arabic/Hebrew-script and Latin words in each block's own prose, excluding code, URLs and nested lists. A 40% RTL-word share selects RTL, accommodating Persian technical prose beginning with English acronyms; other recognized prose selects LTR. Blocks without recognized words retain native `dir="auto"`. Lists receive the same treatment so bullets and indentation follow their reading direction. Code and links remain isolated, and source text is never reordered or augmented with bidi control characters. This is a heuristic, not language identification; ambiguous fragments may still need further refinement. Firefox retains its submitted first-strong `dir="auto"` behavior. See [W3C's direction guidance](https://www.w3.org/International/questions/qa-html-dir) for the distinction.
 
@@ -251,8 +253,8 @@ Every document and reference is untrusted. Native directory capabilities constra
 
 - Source files are opened with read-only options; no write/save command exists.
 - Documents are limited to 8 MiB and must be regular UTF-8 files. Unix nonblocking opens avoid hanging on a replacement FIFO.
-- Images are limited to 4 MiB each, 24 MiB of native bytes per document revision, and 128 image elements. PNG/JPEG/GIF/WebP signatures must match the extension. SVG and remote images are blocked.
-- Raw HTML is disabled; an explicit sanitizer allowlist removes active markup, inline handlers, styles, and document-provided image sources. Task checkboxes are disabled.
+- Images are limited to 4 MiB each, 24 MiB of native bytes per document revision, 32 MiB of encoded image sources in the renderer, and 128 image elements. PNG/JPEG/GIF/WebP signatures must match the extension or embedded MIME type. The unreleased embedded-image path shares the renderer budgets with local images. SVG, non-base64 embedded formats, remote images and data links are blocked.
+- Raw HTML is disabled; an explicit sanitizer allowlist removes active markup, inline handlers, styles, and document-provided image sources. Only the inert `data-image-ref` field permits URI-like text; the loader validates it before assigning `img.src`. Direct `src` and data-valued links remain removed. See [DOMPurify URI configuration](https://github.com/cure53/DOMPurify#control-behavior-relating-to-uri-values). Task checkboxes are disabled.
 - Unsafe schemes, absolute filesystem references, malformed escapes, credentials in external URLs, and traversal escapes are rejected. Rust validates native boundaries independently of frontend checks.
 - Capabilities grant only these reader commands and event subscriptions. The renderer has no unrestricted filesystem, shell, dialog-plugin, or network API.
 - Production CSP restricts scripts/assets to the application, denies frames/objects/forms, and permits only Tauri IPC connections. Trusted inline style updates support reading zoom; untrusted Markdown styles are removed. Native navigation permits only the application origin.
