@@ -4,10 +4,6 @@ All notable user-facing changes will be recorded here. The format follows [Keep 
 
 ## [Unreleased]
 
-### Desktop — Fixed
-
-- Rendered embedded base64 raster images from Markdown exports, including reference definitions such as `![][image2]`, with MIME/signature/byte validation and existing image budgets. Data links, SVG and remote images remain blocked.
-
 ### Firefox integration
 
 - Imported submitted Firefox 0.1.0 sources unchanged, with complete source/runtime
@@ -20,6 +16,12 @@ All notable user-facing changes will be recorded here. The format follows [Keep 
   full supplemental BSD license, readable bundle and remaining provenance gap.
 - Recorded pending-image selection, resource-budget and reading limitations for
   correction in a subsequent Firefox version; no submitted runtime change.
+
+## [Desktop 0.1.1] — 2026-10-09
+
+### Fixed
+
+- Rendered embedded base64 raster images from Markdown exports, including reference definitions such as `![][image2]`, with MIME/signature/byte validation and existing image budgets. Data links, SVG and remote images remain blocked.
 
 ## [Desktop 0.1.0] — 2026-10-08
 

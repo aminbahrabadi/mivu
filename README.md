@@ -4,7 +4,7 @@
 
 A minimal, beautiful, read-only Markdown reader, available as a Linux-first desktop application and a permission-free Firefox extension. Both keep documents local, with no accounts, telemetry, uploads or network-loaded assets. Open source under the MIT license.
 
-**Desktop v0.1.0 is the first Linux release, targeting Zorin OS 18.1 / Ubuntu 24.04.** Packages pass automated quality, native WebKit and package checks. Human installed-desktop acceptance remains pending and is explicitly deferred by the maintainer until after publication; see [validation](#validation-and-manual-desktop-checklist). Ubuntu 22.04 and Debian 12 installation compatibility is not yet confirmed.
+**Desktop v0.1.1 fixes embedded images in Markdown exports.** Linux releases target Zorin OS 18.1 / Ubuntu 24.04. Packages pass automated quality, native WebKit and package checks. Human installed-desktop acceptance remains pending and is explicitly deferred by the maintainer until after publication; see [validation](#validation-and-manual-desktop-checklist). Ubuntu 22.04 and Debian 12 installation compatibility is not yet confirmed.
 
 ## Available applications
 
@@ -19,7 +19,7 @@ A minimal, beautiful, read-only Markdown reader, available as a Linux-first desk
 Versions and release gates are independent. Shared product/design standards are
 conceptual; these applications have separate runtime implementations.
 
-| Capability                                     | Desktop 0.1.0                             | Firefox submitted 0.1.0                           |
+| Capability                                     | Desktop 0.1.1                             | Firefox submitted 0.1.0                           |
 | ---------------------------------------------- | ----------------------------------------- | ------------------------------------------------- |
 | Explicit Markdown selection and file drop      | Native picker/drop                        | Browser file input/drop                           |
 | GFM and inert task lists                       | Implemented                               | Implemented                                       |
@@ -47,13 +47,12 @@ Implemented:
 - Tables keep headers and short words readable; wide tables scroll horizontally without widening the page.
 - Syntax highlighting for Bash, CSS, JavaScript, JSON, Python, Rust, TypeScript, and XML/HTML; other languages remain readable plain code.
 - Constrained relative Markdown links and local PNG/JPEG/GIF/WebP images.
+- Embedded base64 PNG/JPEG/GIF/WebP images, including Markdown-export reference definitions.
 - System, light, and dark themes; comfortable typography, scrolling, text selection and copying.
 - Persian, Arabic-script, English, and mixed-language blocks; code remains left-to-right.
 - Literal document search, keyboard shortcuts, and reading zoom.
 - Debounced external-change refresh, including atomic saves, with scroll preservation.
 - Debian/AppImage packaging configuration, desktop entry, and Markdown MIME registration.
-
-Unreleased desktop improvement: reference-style and inline embedded PNG/JPEG/GIF/WebP images from Markdown exports, with byte/signature validation. This is not included in the published v0.1.0 package.
 
 Remote images, SVG images, raw HTML, editing/saving, code execution, accounts, cloud synchronization, databases, telemetry, plugins, and terminals are intentionally outside v0.1. Mermaid diagrams and mathematics are proposed future features, not currently rendered.
 
@@ -66,18 +65,18 @@ Actual Mivu screenshots from the Linux WebKit window on an isolated X11 display 
 
 ## Installation
 
-Download the desktop `.deb` or AppImage from [Mivu v0.1.0](https://github.com/aminbahrabadi/mivu/releases/tag/v0.1.0). Firefox releases are independent; this tag does not publish a new Firefox package.
+Download the desktop `.deb` or AppImage from [Mivu v0.1.1](https://github.com/aminbahrabadi/mivu/releases/tag/v0.1.1). Firefox releases are independent; this tag does not publish a new Firefox package.
 
 ### Desktop: Debian / Ubuntu / Zorin
 
 From the directory containing the package:
 
 ```sh
-sudo apt install ./Mivu_0.1.0_amd64.deb
+sudo apt install ./Mivu_0.1.1_amd64.deb
 mivu README.md
 ```
 
-To update from an earlier preview with the same package version, use `sudo apt install --reinstall ./Mivu_0.1.0_amd64.deb`. Quit Mivu before reinstalling, then launch it again.
+To update or reinstall, use `sudo apt install --reinstall ./Mivu_0.1.1_amd64.deb`. Quit Mivu before reinstalling, then launch it again.
 
 The package installs `mivu`, a menu launcher, icons, and a MIME definition. GTK 3, WebKitGTK 4.1, libxdo, shared-mime-info, and a suitable glibc are runtime dependencies; apt resolves them. The package records its build host's minimum glibc version conservatively. A package built on Ubuntu 24.04 must not be advertised as Ubuntu 22.04 compatible. CI builds on Ubuntu 22.04 to establish the older baseline; Debian 12 and Ubuntu 22.04 still require actual installation checks before claiming support.
 
@@ -94,14 +93,14 @@ This removes the application, not your Markdown files. Theme preferences and Web
 ### Desktop: AppImage
 
 ```sh
-chmod +x Mivu_0.1.0_amd64.AppImage
-./Mivu_0.1.0_amd64.AppImage README.md
+chmod +x Mivu_0.1.1_amd64.AppImage
+./Mivu_0.1.1_amd64.AppImage README.md
 ```
 
 AppImage retains the build host's glibc baseline. It does not automatically install desktop associations. If FUSE 2 is unavailable, use the supported extraction mode:
 
 ```sh
-APPIMAGE_EXTRACT_AND_RUN=1 ./Mivu_0.1.0_amd64.AppImage README.md
+APPIMAGE_EXTRACT_AND_RUN=1 ./Mivu_0.1.1_amd64.AppImage README.md
 ```
 
 On Ubuntu 24.04, `libfuse2t64` enables normal FUSE execution. Do not remove your system's FUSE 3 package. Delete the AppImage to uninstall it.
@@ -239,7 +238,7 @@ TypeScript owns the toolbar, rendered article, current snapshot, search UI, and 
 3. A bounded read accepts valid UTF-8, strips an optional UTF-8 BOM, and publishes a revisioned snapshot. Failed opens retain the previous snapshot.
 4. A dedicated worker parses with raw HTML disabled; eight explicit highlight.js grammars color supported fenced code. It emits complete top-level blocks in small batches with frontend backpressure. DOMPurify sanitizes each batch before insertion; no worker HTML bypasses the sanitizer. Switching documents terminates obsolete workers.
 5. The renderer validates links, assigns unique heading IDs, infers each prose block/list/table cell's direction, and sets code to `dir="ltr"`. The reader inserts sanitized fragments between animation frames, keeping long-document parsing off the UI thread. A single enormous nested block can still require a larger insertion.
-6. Images initially have inert references, never document-provided `src` URLs. A small worker pool requests bounded local raster bytes from Rust and inserts validated data URLs. The unreleased embedded-image path validates base64, decoded byte length and MIME-matching signatures directly from the selected document, with no extra file reads or network requests. Stale responses are discarded.
+6. Images initially have inert references, never document-provided `src` URLs. A small worker pool requests bounded local raster bytes from Rust and inserts validated data URLs. The embedded-image path validates base64, decoded byte length and MIME-matching signatures directly from the selected document, with no extra file reads or network requests. Stale responses are discarded.
 
 Desktop direction inference counts Arabic/Hebrew-script and Latin words in each block's own prose, excluding code, URLs and nested lists. A 40% RTL-word share selects RTL, accommodating Persian technical prose beginning with English acronyms; other recognized prose selects LTR. Blocks without recognized words retain native `dir="auto"`. Lists receive the same treatment so bullets and indentation follow their reading direction. Code and links remain isolated, and source text is never reordered or augmented with bidi control characters. This is a heuristic, not language identification; ambiguous fragments may still need further refinement. Firefox retains its submitted first-strong `dir="auto"` behavior. See [W3C's direction guidance](https://www.w3.org/International/questions/qa-html-dir) for the distinction.
 
@@ -253,7 +252,7 @@ Every document and reference is untrusted. Native directory capabilities constra
 
 - Source files are opened with read-only options; no write/save command exists.
 - Documents are limited to 8 MiB and must be regular UTF-8 files. Unix nonblocking opens avoid hanging on a replacement FIFO.
-- Images are limited to 4 MiB each, 24 MiB of native bytes per document revision, 32 MiB of encoded image sources in the renderer, and 128 image elements. PNG/JPEG/GIF/WebP signatures must match the extension or embedded MIME type. The unreleased embedded-image path shares the renderer budgets with local images. SVG, non-base64 embedded formats, remote images and data links are blocked.
+- Images are limited to 4 MiB each, 24 MiB of native bytes per document revision, 32 MiB of encoded image sources in the renderer, and 128 image elements. PNG/JPEG/GIF/WebP signatures must match the extension or embedded MIME type. The embedded-image path shares the renderer budgets with local images. SVG, non-base64 embedded formats, remote images and data links are blocked.
 - Raw HTML is disabled; an explicit sanitizer allowlist removes active markup, inline handlers, styles, and document-provided image sources. Only the inert `data-image-ref` field permits URI-like text; the loader validates it before assigning `img.src`. Direct `src` and data-valued links remain removed. See [DOMPurify URI configuration](https://github.com/cure53/DOMPurify#control-behavior-relating-to-uri-values). Task checkboxes are disabled.
 - Unsafe schemes, absolute filesystem references, malformed escapes, credentials in external URLs, and traversal escapes are rejected. Rust validates native boundaries independently of frontend checks.
 - Capabilities grant only these reader commands and event subscriptions. The renderer has no unrestricted filesystem, shell, dialog-plugin, or network API.
@@ -398,16 +397,16 @@ python3 scripts/inspect_packages.py
 Outputs are under `src-tauri/target/release/bundle/deb/` and `appimage/`. The package helper supplies a conservative host glibc dependency and locked Rust resolution. AppImage bundling downloads upstream Linuxdeploy tools and can require the extraction environment setting shown above. Package inspection asserts identity, integration files, dependencies, and AppImage headers, then records SHA-256 checksums. To exercise the Debian package without installing it:
 
 ```sh
-dbus-run-session --config-file=scripts/dbus-test.conf -- xvfb-run -a python3 scripts/native_smoke.py --deb src-tauri/target/release/bundle/deb/Mivu_0.1.0_amd64.deb
+dbus-run-session --config-file=scripts/dbus-test.conf -- xvfb-run -a python3 scripts/native_smoke.py --deb src-tauri/target/release/bundle/deb/Mivu_0.1.1_amd64.deb
 ```
 
 GitHub Actions runs frontend/Rust quality and native WebKit tests on pull requests. Branch/manual/tag builds additionally produce packages on Ubuntu 22.04, smoke-test Debian and AppImage packages, inspect artifacts, and upload them. Actions are pinned to commit SHAs, checkout credentials are not persisted, and ordinary jobs have read-only repository permissions.
 
-Version numbers in package.json, Cargo.toml, tauri.conf.json, lockfiles, and CHANGELOG.md must agree. A maintainer intentionally pushes a matching `vX.Y.Z` tag after automated checks pass. The tag workflow verifies versions and creates a **draft** release with the verified CI artifacts; publishing is a separate maintainer action after inspecting artifact checksums and recording any unfinished manual/platform acceptance in the release notes. For v0.1.0 the maintainer explicitly chose to perform installed-desktop acceptance after publication. No public release is created automatically on main. Do not upload newer-host binaries as older-compatible artifacts.
+Version numbers in package.json, Cargo.toml, tauri.conf.json, lockfiles, and CHANGELOG.md must agree. A maintainer intentionally pushes a matching `vX.Y.Z` tag after automated checks pass. The tag workflow verifies versions and creates a **draft** release with the verified CI artifacts; publishing is a separate maintainer action after inspecting artifact checksums and recording any unfinished manual/platform acceptance in the release notes. For v0.1.0 and v0.1.1 the maintainer explicitly chose to perform installed-desktop acceptance after publication. No public release is created automatically on main. Do not upload newer-host binaries as older-compatible artifacts.
 
 ## Validation and manual desktop checklist
 
-Automated evidence and exact limitations live in [docs/validation.md](docs/validation.md). Publication does not mean every target-environment check has passed; the following manual checks remain outstanding for v0.1.0.
+Automated evidence and exact limitations live in [docs/validation.md](docs/validation.md). Publication does not mean every target-environment check has passed; the following manual checks remain outstanding for v0.1.1.
 
 On a clean Zorin OS 18.1 installation:
 
