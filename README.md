@@ -46,6 +46,8 @@ Implemented:
 - GFM headings, tables, nested lists, disabled task lists, strikethrough, autolinks, links, and images.
 - Tables keep headers and short words readable; wide tables scroll horizontally without widening the page.
 - Syntax highlighting for Bash, CSS, JavaScript, JSON, Python, Rust, TypeScript, and XML/HTML; other languages remain readable plain code.
+- Long code lines wrap visually, preserving the original text and indentation when copied.
+- Incomplete ChatGPT diagram exports show a notice and their flattened text, with leaked styles folded into an expandable code block. Missing connections and code line breaks cannot be recovered; re-export the original Markdown to restore them.
 - Constrained relative Markdown links and local PNG/JPEG/GIF/WebP images.
 - Embedded base64 PNG/JPEG/GIF/WebP images, including Markdown-export reference definitions.
 - System, light, and dark themes; comfortable typography, scrolling, text selection and copying.

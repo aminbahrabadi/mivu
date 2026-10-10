@@ -4,6 +4,11 @@ All notable user-facing changes will be recorded here. The format follows [Keep 
 
 ## [Unreleased]
 
+### Desktop fixes
+
+- Wrap long code lines visually while preserving source text and indentation.
+- Fold leaked ChatGPT diagram styles into an expandable block, retain the exported text and explain that missing diagram connections cannot be recovered. Search reveals matches inside folded styles.
+
 ### Firefox integration
 
 - Imported submitted Firefox 0.1.0 sources unchanged, with complete source/runtime

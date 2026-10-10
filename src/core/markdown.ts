@@ -11,6 +11,33 @@ export function renderHtml(
   headings = new Set<string>(),
 ): DocumentFragment {
   const fragment = sanitizeHtml(html);
+  for (const paragraph of fragment.querySelectorAll('p')) {
+    const text = paragraph.textContent ?? '';
+    if (!/^#chatgpt-mermaid-[\w-]+\{font-family:/.test(text)) continue;
+    const end =
+      /#chatgpt-mermaid-[\w-]+ :root\{--mermaid-font-family:[^{}]*;\}/.exec(
+        text,
+      );
+    if (!end) continue;
+    const boundary = end.index + end[0].length;
+    const notice = document.createElement('div');
+    notice.className = 'incomplete-diagram';
+    const explanation = document.createElement('p');
+    explanation.textContent =
+      'Diagram unavailable: this export contains styles and flattened text, but no diagram source or connections.';
+    const labels = document.createElement('p');
+    labels.textContent = text.slice(boundary);
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent = 'Show exported diagram styles';
+    const pre = document.createElement('pre');
+    const code = document.createElement('code');
+    code.textContent = text.slice(0, boundary);
+    pre.append(code);
+    details.append(summary, pre);
+    notice.append(explanation, labels, details);
+    paragraph.replaceWith(notice);
+  }
   for (const block of fragment.querySelectorAll(
     'h1,h2,h3,h4,h5,h6,p,li,ul,ol,blockquote,th,td',
   ))

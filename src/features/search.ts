@@ -136,7 +136,11 @@ export class DocumentSearch {
     this.index = count ? (this.index + delta + count) % count : -1;
     const current = this.matches.groups[this.index] ?? [];
     for (const mark of current) mark.classList.add('current-match');
-    if (scroll) current[0]?.scrollIntoView({ block: 'center' });
+    if (scroll) {
+      const details = current[0]?.closest('details');
+      if (details) details.open = true;
+      current[0]?.scrollIntoView({ block: 'center' });
+    }
     this.status.textContent = count
       ? `${this.index + 1} of ${count}${this.matches.truncated ? '+' : ''}`
       : '0 results';

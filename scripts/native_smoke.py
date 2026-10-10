@@ -349,6 +349,37 @@ def main():
             assert driver.execute('return getComputedStyle(document.querySelector("article li")).direction') == 'rtl'
             driver.execute('document.dispatchEvent(new KeyboardEvent("keydown", {key:"Escape"}))')
             assert driver.execute('return document.querySelector("article").textContent') == layout['text']
+            driver.execute('document.querySelector("[data-action=open]").click()')
+            choose_native_file(ROOT / 'tests/fixtures/incomplete-export.md')
+            wait_for(lambda: document_ready(driver, 'Incomplete export'))
+            for theme, width in (('light', 1000), ('dark', 560)):
+                driver.execute('document.querySelector("#theme").value=arguments[0]; document.querySelector("#theme").dispatchEvent(new Event("change"))', theme)
+                driver.request('POST', f'/session/{driver.session}/window/rect', {'width': width, 'height': 1000})
+                layout = driver.execute('''
+                    const article = document.querySelector('article');
+                    const pre = article.querySelector('pre');
+                    const code = pre.querySelector('code');
+                    const details = article.querySelector('.incomplete-diagram details');
+                    const range = document.createRange();
+                    range.selectNodeContents(code);
+                    return {
+                        wraps: new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size > 1,
+                        confined: pre.scrollWidth <= pre.clientWidth + 1 && document.documentElement.scrollWidth <= innerWidth,
+                        ltr: getComputedStyle(code).direction === 'ltr',
+                        source: code.textContent,
+                        folded: details && !details.open,
+                        labels: article.querySelector('.incomplete-diagram p:nth-child(2)')?.textContent,
+                        intact: article.querySelector('code.language-python').textContent
+                    };
+                ''')
+                assert layout['wraps'] and layout['confined'] and layout['ltr'] and layout['folded'], layout
+                assert 'transactionwith' in layout['source'] and layout['source'].count('\n') == 1, layout
+                assert layout['labels'] == 'Django APIPostgreSQLRabbitMQWorker 1Worker 2', layout
+                assert layout['intact'].count('\n') == 3 and '\n    order' in layout['intact'], layout
+                driver.screenshot(f'incomplete-export-{theme}-{width}.png')
+            driver.execute('document.querySelector("#find").click(); const input=document.querySelector("#search-input"); input.value="stroke-dashoffset"; input.dispatchEvent(new Event("input"))')
+            assert driver.execute('return document.querySelector(".incomplete-diagram details").open')
+            driver.execute('document.dispatchEvent(new KeyboardEvent("keydown", {key:"Escape"})); document.querySelector(".incomplete-diagram details").open = false')
             with tempfile.TemporaryDirectory(dir=ROOT / 'test-results') as temporary:
                 folder = Path(temporary)
                 path = folder / 'سلام with spaces.md'

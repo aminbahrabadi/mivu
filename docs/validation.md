@@ -49,6 +49,16 @@ The local validation `.deb` is 3,691,800 bytes, requires glibc >= 2.39 and has S
 
 Desktop v0.1.1 publishes this fix through the tagged Ubuntu 22.04 CI workflow after automated checks and package checksum verification. The maintainer explicitly deferred installed-desktop acceptance until after release. The earlier local v0.1.0 validation build above is separate from the [v0.1.1 release assets](https://github.com/aminbahrabadi/mivu/releases/tag/v0.1.1).
 
+## Incomplete desktop exports (2026-10-10, unreleased)
+
+Long code lines now wrap visually without changing copied source text, indentation or logical line breaks. Recognizable ChatGPT diagram stylesheet exports show an explicit unavailable-diagram notice and the remaining flattened text; styles remain accessible as inert code in a collapsed disclosure. Searching inside that disclosure expands it. Missing code line breaks and diagram connections are not reconstructed.
+
+`pnpm check` passed 70 frontend tests, TypeScript, ESLint and production build. `pnpm check:rust` passed rustfmt, Clippy and 7 Rust tests. Changed frontend files passed Prettier and the native harness passed Python compilation. The rebuilt Debian package passed the complete extracted-package native suite, including the synthetic incomplete-export regression in light/dark at 1000/560px, source-preserving code wrapping, folded styles and search expansion.
+
+An isolated WebKit run also opened the supplied `p2.md` and `p3.md` directly, checked both themes and widths, identified all four incomplete diagram exports and verified both original SHA-256 hashes were unchanged. Local captures under `test-results/user-exports/` were visually inspected; private document contents and captures are not committed. These are automated application checks, not human installed-desktop acceptance.
+
+The local, unreleased `Mivu_0.1.1_amd64.deb` is 3,691,086 bytes with SHA-256 `9e2621adae29c8879a9783f83426712ec50e46a80a60487a10e7481ca641efff` and requires glibc >= 2.39. Package identity, dependencies and desktop/MIME/license contents passed inspection. The existing published v0.1.1 assets remain unchanged. No host installation or AppImage rebuild was performed.
+
 ## Performance methodology
 
 The recorded benchmarks below predate the table and mixed-direction fixes and have not been rerun for these changes.
