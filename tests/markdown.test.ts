@@ -4,8 +4,57 @@ import { sanitizeHtml } from '../src/core/security';
 import { classifyReference } from '../src/core/links';
 import { loadImages } from '../src/ui/reader';
 import embeddedFixture from './fixtures/embedded-images.md?raw';
+import incompleteFixture from './fixtures/incomplete-export.md?raw';
 
 describe('Markdown reading pipeline', () => {
+  it('folds leaked diagram styles without inventing connections or changing code', () => {
+    const html = renderMarkdown(incompleteFixture);
+    const notice = html.querySelector('.incomplete-diagram');
+    expect(notice?.querySelector('p')?.textContent).toContain(
+      'Diagram unavailable',
+    );
+    expect(notice?.querySelectorAll('p')[1]?.textContent).toBe(
+      'Django APIPostgreSQLRabbitMQWorker 1Worker 2',
+    );
+    expect(notice?.querySelector('details')?.open).toBe(false);
+    expect(notice?.querySelector('pre code')?.textContent).toContain(
+      '@keyframes',
+    );
+    expect(html.querySelector('pre code')?.textContent).toBe(
+      'from django.db import transactionwith transaction.atomic():    order = Order.objects.create(user=user)    Payment.objects.create(order=order, amount=100)\n',
+    );
+    expect(html.querySelector('code.language-python')?.textContent).toBe(
+      'with transaction.atomic():\n    order = Order.objects.create(user=user)\n    Payment.objects.create(order=order, amount=100)\n',
+    );
+    expect(html.querySelector('h2:last-of-type')?.textContent).toBe(
+      'Following prose',
+    );
+  });
+
+  it('keeps ordinary prose, incomplete style fragments and fenced CSS intact', () => {
+    const css = '#chatgpt-mermaid-example{font-family:system-ui;}';
+    const html = renderMarkdown(
+      `Text ${css}\n\n\\${css}\n\n\`\`\`css\n${css}\n\`\`\``,
+    );
+    expect(html.querySelector('details')).toBeNull();
+    expect(html.querySelector('pre code')?.textContent).toBe(css + '\n');
+    expect(html.querySelectorAll('p')).toHaveLength(2);
+  });
+
+  it('keeps exported diagram CSS and markup inert', () => {
+    const css =
+      '#chatgpt-mermaid-example{font-family:system-ui;background:url(https://evil.test/pixel);}#chatgpt-mermaid-example :root{--mermaid-font-family:system-ui;}';
+    const html = renderMarkdown(
+      `\\${css}<img src="https://evil.test/pixel" onerror="alert(1)">`,
+    );
+    expect(html.querySelector('details code')?.textContent).toBe(css);
+    expect(html.querySelector('.incomplete-diagram')?.textContent).toContain(
+      '<img',
+    );
+    expect(html.querySelector('img,script,style,svg')).toBeNull();
+    expect(html.querySelector('[style],[onerror]')).toBeNull();
+  });
+
   it('renders embedded reference and inline images without filesystem or network access', async () => {
     const article = document.createElement('article');
     article.append(renderMarkdown(embeddedFixture));

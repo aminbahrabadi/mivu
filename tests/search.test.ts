@@ -1,8 +1,40 @@
-import { describe, expect, it } from 'vitest';
-import { clearMatches, highlightMatches } from '../src/features/search';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  clearMatches,
+  DocumentSearch,
+  highlightMatches,
+} from '../src/features/search';
 import { renderMarkdown } from '../src/core/markdown';
+import incompleteFixture from './fixtures/incomplete-export.md?raw';
 
 describe('document search', () => {
+  it('reveals a selected match inside folded export styles', () => {
+    const reader = document.createElement('article');
+    reader.append(renderMarkdown(incompleteFixture));
+    const bar = document.createElement('div');
+    const input = document.createElement('input');
+    const status = document.createElement('span');
+    status.setAttribute('role', 'status');
+    bar.append(input, status);
+    for (const action of ['next', 'previous', 'close-search']) {
+      const button = document.createElement('button');
+      button.dataset.action = action;
+      bar.append(button);
+    }
+    const search = new DocumentSearch(reader, bar);
+    const scrolling = vi.fn();
+    const original = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scrolling;
+    try {
+      search.input.value = 'stroke-dashoffset';
+      search.update();
+      expect(reader.querySelector('details')?.open).toBe(true);
+      expect(status.textContent).toBe('1 of 1');
+      expect(scrolling).toHaveBeenCalledOnce();
+    } finally {
+      HTMLElement.prototype.scrollIntoView = original;
+    }
+  });
   it('matches phrases across inline formatting while preserving document structure', () => {
     const root = document.createElement('article');
     root.append(

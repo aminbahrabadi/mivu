@@ -108,13 +108,24 @@
   border-radius: 10px;
   line-height: 1.65;
   tab-size: 4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .markdown pre code {
   background: none;
   padding: 0;
   border-radius: 0;
   font-size: 0.8em;
-  overflow-wrap: normal;
+  overflow-wrap: anywhere;
+}
+.markdown .incomplete-diagram {
+  padding: 0.6em 1em;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+}
+.markdown .incomplete-diagram summary {
+  color: var(--muted);
+  cursor: pointer;
 }
 .markdown .table-scroll {
   overflow-x: auto;

@@ -1,6 +1,6 @@
 [package]
 name = "mivu"
-version = "0.1.1"
+version = "0.1.2"
 description = "A minimal, beautiful, read-only Markdown reader."
 authors = ["Amin Bahrabadi <39689258+aminbahrabadi@users.noreply.github.com>"]
 license = "MIT"

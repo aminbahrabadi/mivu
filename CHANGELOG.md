@@ -17,6 +17,13 @@ All notable user-facing changes will be recorded here. The format follows [Keep 
 - Recorded pending-image selection, resource-budget and reading limitations for
   correction in a subsequent Firefox version; no submitted runtime change.
 
+## [Desktop 0.1.2] — 2026-10-10
+
+### Fixed
+
+- Wrap long code lines visually while preserving source text and indentation.
+- Fold leaked ChatGPT diagram styles into an expandable block, retain the exported text and explain that missing diagram connections cannot be recovered. Search reveals matches inside folded styles.
+
 ## [Desktop 0.1.1] — 2026-10-09
 
 ### Fixed

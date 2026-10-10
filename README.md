@@ -4,7 +4,7 @@
 
 A minimal, beautiful, read-only Markdown reader, available as a Linux-first desktop application and a permission-free Firefox extension. Both keep documents local, with no accounts, telemetry, uploads or network-loaded assets. Open source under the MIT license.
 
-**Desktop v0.1.1 fixes embedded images in Markdown exports.** Linux releases target Zorin OS 18.1 / Ubuntu 24.04. Packages pass automated quality, native WebKit and package checks. Human installed-desktop acceptance remains pending and is explicitly deferred by the maintainer until after publication; see [validation](#validation-and-manual-desktop-checklist). Ubuntu 22.04 and Debian 12 installation compatibility is not yet confirmed.
+**Desktop v0.1.2 improves incomplete Markdown exports:** long code wraps, and leaked diagram styles collapse with an explanation. Embedded raster images remain supported. Linux releases target Zorin OS 18.1 / Ubuntu 24.04. Packages pass automated quality, native WebKit and package checks. Human installed-desktop acceptance remains pending and is explicitly deferred by the maintainer until after publication; see [validation](#validation-and-manual-desktop-checklist). Ubuntu 22.04 and Debian 12 installation compatibility is not yet confirmed.
 
 ## Available applications
 
@@ -19,7 +19,7 @@ A minimal, beautiful, read-only Markdown reader, available as a Linux-first desk
 Versions and release gates are independent. Shared product/design standards are
 conceptual; these applications have separate runtime implementations.
 
-| Capability                                     | Desktop 0.1.1                             | Firefox submitted 0.1.0                           |
+| Capability                                     | Desktop 0.1.2                             | Firefox submitted 0.1.0                           |
 | ---------------------------------------------- | ----------------------------------------- | ------------------------------------------------- |
 | Explicit Markdown selection and file drop      | Native picker/drop                        | Browser file input/drop                           |
 | GFM and inert task lists                       | Implemented                               | Implemented                                       |
@@ -46,6 +46,8 @@ Implemented:
 - GFM headings, tables, nested lists, disabled task lists, strikethrough, autolinks, links, and images.
 - Tables keep headers and short words readable; wide tables scroll horizontally without widening the page.
 - Syntax highlighting for Bash, CSS, JavaScript, JSON, Python, Rust, TypeScript, and XML/HTML; other languages remain readable plain code.
+- Long code lines wrap visually, preserving the original text and indentation when copied.
+- Incomplete ChatGPT diagram exports show a notice and their flattened text, with leaked styles folded into an expandable code block. Missing connections and code line breaks cannot be recovered; re-export the original Markdown to restore them.
 - Constrained relative Markdown links and local PNG/JPEG/GIF/WebP images.
 - Embedded base64 PNG/JPEG/GIF/WebP images, including Markdown-export reference definitions.
 - System, light, and dark themes; comfortable typography, scrolling, text selection and copying.
@@ -65,18 +67,18 @@ Actual Mivu screenshots from the Linux WebKit window on an isolated X11 display 
 
 ## Installation
 
-Download the desktop `.deb` or AppImage from [Mivu v0.1.1](https://github.com/aminbahrabadi/mivu/releases/tag/v0.1.1). Firefox releases are independent; this tag does not publish a new Firefox package.
+Download the desktop `.deb` or AppImage from [Mivu v0.1.2](https://github.com/aminbahrabadi/mivu/releases/tag/v0.1.2). Firefox releases are independent; this tag does not publish a new Firefox package.
 
 ### Desktop: Debian / Ubuntu / Zorin
 
 From the directory containing the package:
 
 ```sh
-sudo apt install ./Mivu_0.1.1_amd64.deb
+sudo apt install ./Mivu_0.1.2_amd64.deb
 mivu README.md
 ```
 
-To update or reinstall, use `sudo apt install --reinstall ./Mivu_0.1.1_amd64.deb`. Quit Mivu before reinstalling, then launch it again.
+To update or reinstall, use `sudo apt install --reinstall ./Mivu_0.1.2_amd64.deb`. Quit Mivu before reinstalling, then launch it again.
 
 The package installs `mivu`, a menu launcher, icons, and a MIME definition. GTK 3, WebKitGTK 4.1, libxdo, shared-mime-info, and a suitable glibc are runtime dependencies; apt resolves them. The package records its build host's minimum glibc version conservatively. A package built on Ubuntu 24.04 must not be advertised as Ubuntu 22.04 compatible. CI builds on Ubuntu 22.04 to establish the older baseline; Debian 12 and Ubuntu 22.04 still require actual installation checks before claiming support.
 
@@ -93,14 +95,14 @@ This removes the application, not your Markdown files. Theme preferences and Web
 ### Desktop: AppImage
 
 ```sh
-chmod +x Mivu_0.1.1_amd64.AppImage
-./Mivu_0.1.1_amd64.AppImage README.md
+chmod +x Mivu_0.1.2_amd64.AppImage
+./Mivu_0.1.2_amd64.AppImage README.md
 ```
 
 AppImage retains the build host's glibc baseline. It does not automatically install desktop associations. If FUSE 2 is unavailable, use the supported extraction mode:
 
 ```sh
-APPIMAGE_EXTRACT_AND_RUN=1 ./Mivu_0.1.1_amd64.AppImage README.md
+APPIMAGE_EXTRACT_AND_RUN=1 ./Mivu_0.1.2_amd64.AppImage README.md
 ```
 
 On Ubuntu 24.04, `libfuse2t64` enables normal FUSE execution. Do not remove your system's FUSE 3 package. Delete the AppImage to uninstall it.
@@ -397,16 +399,16 @@ python3 scripts/inspect_packages.py
 Outputs are under `src-tauri/target/release/bundle/deb/` and `appimage/`. The package helper supplies a conservative host glibc dependency and locked Rust resolution. AppImage bundling downloads upstream Linuxdeploy tools and can require the extraction environment setting shown above. Package inspection asserts identity, integration files, dependencies, and AppImage headers, then records SHA-256 checksums. To exercise the Debian package without installing it:
 
 ```sh
-dbus-run-session --config-file=scripts/dbus-test.conf -- xvfb-run -a python3 scripts/native_smoke.py --deb src-tauri/target/release/bundle/deb/Mivu_0.1.1_amd64.deb
+dbus-run-session --config-file=scripts/dbus-test.conf -- xvfb-run -a python3 scripts/native_smoke.py --deb src-tauri/target/release/bundle/deb/Mivu_0.1.2_amd64.deb
 ```
 
 GitHub Actions runs frontend/Rust quality and native WebKit tests on pull requests. Branch/manual/tag builds additionally produce packages on Ubuntu 22.04, smoke-test Debian and AppImage packages, inspect artifacts, and upload them. Actions are pinned to commit SHAs, checkout credentials are not persisted, and ordinary jobs have read-only repository permissions.
 
-Version numbers in package.json, Cargo.toml, tauri.conf.json, lockfiles, and CHANGELOG.md must agree. A maintainer intentionally pushes a matching `vX.Y.Z` tag after automated checks pass. The tag workflow verifies versions and creates a **draft** release with the verified CI artifacts; publishing is a separate maintainer action after inspecting artifact checksums and recording any unfinished manual/platform acceptance in the release notes. For v0.1.0 and v0.1.1 the maintainer explicitly chose to perform installed-desktop acceptance after publication. No public release is created automatically on main. Do not upload newer-host binaries as older-compatible artifacts.
+Version numbers in package.json, Cargo.toml, tauri.conf.json, lockfiles, and CHANGELOG.md must agree. A maintainer intentionally pushes a matching `vX.Y.Z` tag after automated checks pass. The tag workflow verifies versions and creates a **draft** release with the verified CI artifacts; publishing is a separate maintainer action after inspecting artifact checksums and recording any unfinished manual/platform acceptance in the release notes. For v0.1.0, v0.1.1 and v0.1.2 the maintainer chose to defer installed-desktop acceptance until after publication. No public release is created automatically on main. Do not upload newer-host binaries as older-compatible artifacts.
 
 ## Validation and manual desktop checklist
 
-Automated evidence and exact limitations live in [docs/validation.md](docs/validation.md). Publication does not mean every target-environment check has passed; the following manual checks remain outstanding for v0.1.1.
+Automated evidence and exact limitations live in [docs/validation.md](docs/validation.md). Publication does not mean every target-environment check has passed; the following manual checks remain outstanding for v0.1.2.
 
 On a clean Zorin OS 18.1 installation:
 
